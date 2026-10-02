@@ -48,10 +48,10 @@ function schemSVG(){
   ${unit('corona','Corona filter',`<rect class="eq" x="600" y="114" width="90" height="112" rx="6"/><path d="M618 124v92M636 124v92M654 124v92M672 124v92" stroke="#4a5968"/><path id="spark" d="M627 150l6 8-5 3 7 9" stroke="#8ccbe0" fill="none" stroke-width="1.5"/>`,600,62)}
   ${unit('cooling','Gas cooler',`<rect class="eq" x="760" y="140" width="64" height="60" rx="6"/><g class="fan" id="fanc"><circle cx="792" cy="170" r="16" fill="none" stroke="#5d6a77" stroke-width="1.5"/><path d="M792 154v32M776 170h32" stroke="#5d6a77" stroke-width="1.5"/></g>`,748,250)}
   ${unit('gen','Gas boosters',`${engines}<text id="engMore" x="910" y="250" class="sb" text-anchor="middle"></text>`,840,62)}
-  ${unit('grid','Glass factory furnace',`<path class="eq" d="M1030 290V170l26-22v22l26-22v22l26-22v22l26-22v142z"/><rect class="eq" x="1108" y="118" width="14" height="40"/><rect x="1046" y="228" width="92" height="40" rx="4" fill="#1a1f25" stroke="#4a5968"/><rect id="glow2" x="1050" y="232" width="84" height="32" rx="3" fill="url(#ember)"/><path d="M1060 256h64" stroke="#ffd27a" stroke-width="2" opacity=".6"/>`,1010,62)}
+  ${unit('grid','Glass factory furnace',`<path class="eq" d="M1030 290V170l26-22v22l26-22v22l26-22v22l26-22v142z"/><rect class="eq" x="1108" y="118" width="14" height="40"/><rect x="1046" y="228" width="92" height="40" rx="4" fill="#1a1f25" stroke="#4a5968"/><rect id="glow2" x="1050" y="232" width="84" height="32" rx="3" fill="url(#ember)"/><path d="M1060 256h64" stroke="#ffd27a" stroke-width="2" opacity=".6"/>`,990,62)}
   ${unit('eng2','Engines for surplus gas',`<rect class="eq" x="990" y="304" width="60" height="32" rx="4"/><g class="fan" id="fanE"><circle cx="1032" cy="320" r="9" fill="none" stroke="#5d6a77" stroke-width="1.5"/><path d="M1032 311v18M1023 320h18" stroke="#5d6a77" stroke-width="1.5"/></g><path d="M1160 356l12-58 12 58M1164 336h16M1167 316h10" stroke="#5d6a77" fill="none" stroke-width="1.5"/>`,820,306)}
   </svg></div>
-  <div class="legend2"><span><i style="background:var(--waste)"></i>Waste and briquets</span><span><i style="background:var(--gas)"></i>Syngas</span><span><i style="background:var(--power)"></i>Electricity</span><span><i style="background:var(--ash)"></i>Ash</span></div>`;
+  <div class="legend2" style="left:14px;right:auto"><span><i style="background:var(--waste)"></i>Waste and briquets</span><span><i style="background:var(--gas)"></i>Syngas</span><span><i style="background:var(--power)"></i>Electricity</span><span><i style="background:var(--ash)"></i>Ash</span></div>`;
 }
 function setFlow(id,ratio){const el=document.getElementById(id);if(!el)return;const stop=!(ratio>0.02);el.classList.toggle('stop',stop);if(!stop){const d=(2.2/Math.max(.25,Math.min(2,ratio))).toFixed(2)+'s';if(el.style.animationDuration!==d)el.style.animationDuration=d;}}
 function setTxt(id,v){const el=document.getElementById(id);if(el&&el.textContent!==v)el.textContent=v;}
@@ -68,7 +68,7 @@ function renderSchematic(){
   setTxt('v_corona',fmt(cur.corona)+' °C');setTxt('s_corona',fmt(cur.kv,1)+' kV, tar '+fmt(cur.tar)+' mg/Nm³');
   setTxt('v_cooling',fmt(cur.cooling)+' °C');setTxt('s_cooling',fmt(cur.genRate)+' Nm³/h to the factory');
   setTxt('v_gen',fmt(cur.genRate)+' Nm³/h');setTxt('s_gen',ENGINES+' blowers, gas at '+fmt(cur.cooling)+' °C');
-  setTxt('v_grid',fmt(cur.kw/KWH_PER_MMBTU,1)+' MMBtu/h');setTxt('s_grid','heat, '+fmt(cur.kw/NG_KWH)+' Nm³/h of natural gas');
+  setTxt('v_grid',fmt(cur.facKw/KWH_PER_MMBTU,1)+' MMBtu/h');setTxt('s_grid','= '+fmt(cur.facKw/NG_KWH)+' Nm³/h '+(typeof fuelName==='function'?fuelName():'natural gas'));
   setTxt('engMore','');setTxt('v_eng2',fmt(cur.engKw)+' kW');setTxt('s_eng2',HYB.engines+' × J620, '+fmt(cur.expKw)+' kW exported');
   setFlow('f_eng',cur.engFuelKw>1?cur.engFuelKw/(HYB.engines*HYB.engKw/HYB.eff||1):0);setFlow('f_exp',cur.expKw>1?cur.expKw/(HYB.engines*HYB.engKw||1):0);{const fe=document.getElementById('fanE');if(fe)fe.classList.toggle('stop',!(cur.engKw>1));}
   const g2=document.getElementById('glow2');if(g2)g2.setAttribute('opacity',(0.25+0.75*Math.min(1,cur.kw/(RATED_KW*0.85))).toFixed(2));

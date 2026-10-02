@@ -172,7 +172,7 @@ function renderMain(){
     ['Syngas out of reactor','Nm³',T.gas,0,rw+' '+fmt(cur.gasRate)+' Nm³/h',1],
     ['Gas to the factory','Nm³',T.toGen,0,rw+' '+fmt(cur.genRate)+' Nm³/h',1],
     ['Energy delivered','MMBtu',T.kwh/KWH_PER_MMBTU,0,rw+' '+fmt(cur.kw/KWH_PER_MMBTU,1)+' MMBtu/h',1],
-    ['Natural gas replaced','Nm³',T.kwh/NG_KWH,0,'at '+fmt(NG_KWH,1)+' kWh per Nm³',1],
+    [(typeof FAC!=='undefined'&&FAC.fuel==='bio'?'Biomethane replaced':'Natural gas replaced'),'Nm³',avgOf(TA,'facKw')*TA.h/NG_KWH,0,'at '+fmt(NG_KWH,1)+' kWh per Nm³',1],
     ['Ash produced','kg',T.ash,0,fmt(T.briq?T.ash/T.briq*100:0,1)+' % of feed',1],
     ['Electricity from the engines','kWh',avgOf(TA,'engKw')*TA.h,0,rw+' '+fmt(cur.engKw)+' kW, '+fmt(cur.expKw)+' kW exported',1],
     ['CO₂ at the furnace','kg',T.co2,0,rw+' '+fmt(cur.co2Rate)+' kg/h, mostly biogenic',1],
