@@ -35,7 +35,7 @@ function schemSVG(){
   <!-- pipes -->
   <path class="pipe" d="M128 236H168"/><path class="pipe" d="M232 232L330 96"/>
   <path class="pipe" d="M404 104H474"/><path class="pipe" d="M500 262V282H600V226"/><path class="pipe" d="M690 170H760"/><path class="pipe" d="M824 170H860V146H884M860 170V202H884"/>
-  <path class="pipe" d="M936 146H966V174H1030M936 202H966V174"/><path class="pipe" d="M966 202V320H990"/><path class="pipe" d="M1050 320H1150"/><path class="pipe" d="M368 266V300H300"/>
+  <path class="pipe" d="M936 146H966V174H1030M936 202H966V174"/><path class="pipe engp" d="M966 202V320H990"/><path class="pipe engp" d="M1050 320H1150"/><path class="pipe" d="M368 266V300H300"/>
   <!-- flows -->
   <path class="fl waste" id="f_waste" d="M128 236H168"/><path class="fl waste" id="f_belt" d="M232 232L330 96"/>
   <path class="fl gas" id="f_gas1" d="M404 104H474"/><path class="fl gas" id="f_gas2" d="M500 262V282H600V226"/><path class="fl gas" id="f_gas3" d="M690 170H760"/><path class="fl gas" id="f_gas4" d="M824 170H860V146H884M860 170V202H884"/>
@@ -51,7 +51,7 @@ function schemSVG(){
   ${unit('grid','Glass factory furnace',`<path class="eq" d="M1030 290V170l26-22v22l26-22v22l26-22v22l26-22v142z"/><rect class="eq" x="1108" y="118" width="14" height="40"/><rect x="1046" y="228" width="92" height="40" rx="4" fill="#1a1f25" stroke="#4a5968"/><rect id="glow2" x="1050" y="232" width="84" height="32" rx="3" fill="url(#ember)"/><path d="M1060 256h64" stroke="#ffd27a" stroke-width="2" opacity=".6"/>`,990,62)}
   ${unit('eng2','Engines for surplus gas',`<rect class="eq" x="990" y="304" width="60" height="32" rx="4"/><g class="fan" id="fanE"><circle cx="1032" cy="320" r="9" fill="none" stroke="#5d6a77" stroke-width="1.5"/><path d="M1032 311v18M1023 320h18" stroke="#5d6a77" stroke-width="1.5"/></g><path d="M1160 356l12-58 12 58M1164 336h16M1167 316h10" stroke="#5d6a77" fill="none" stroke-width="1.5"/>`,820,306)}
   </svg></div>
-  <div class="legend2" style="left:14px;right:auto"><span><i style="background:var(--waste)"></i>Waste and briquets</span><span><i style="background:var(--gas)"></i>Syngas</span><span><i style="background:var(--power)"></i>Electricity</span><span><i style="background:var(--ash)"></i>Ash</span></div>`;
+  <div class="legend2" style="left:14px;right:auto"><span><i style="background:var(--waste)"></i>Waste and briquets</span><span><i style="background:var(--gas)"></i>Syngas</span><span><i style="background:var(--ash)"></i>Ash</span></div>`;
 }
 function setFlow(id,ratio){const el=document.getElementById(id);if(!el)return;const stop=!(ratio>0.02);el.classList.toggle('stop',stop);if(!stop){const d=(2.2/Math.max(.25,Math.min(2,ratio))).toFixed(2)+'s';if(el.style.animationDuration!==d)el.style.animationDuration=d;}}
 function setTxt(id,v){const el=document.getElementById(id);if(el&&el.textContent!==v)el.textContent=v;}
@@ -69,6 +69,7 @@ function renderSchematic(){
   setTxt('v_cooling',fmt(cur.cooling)+' °C');setTxt('s_cooling',fmt(cur.genRate)+' Nm³/h to the factory');
   setTxt('v_gen',fmt(cur.genRate)+' Nm³/h');setTxt('s_gen',ENGINES+' blowers, gas at '+fmt(cur.cooling)+' °C');
   setTxt('v_grid',fmt(cur.facKw/KWH_PER_MMBTU,1)+' MMBtu/h');setTxt('s_grid','= '+fmt(cur.facKw/NG_KWH)+' Nm³/h '+(typeof fuelName==='function'?fuelName():'natural gas'));
+  {const on=typeof FAC!=='undefined'&&FAC.eng;['u_eng2','f_eng','f_exp'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=on?'':'none';});const pp=document.querySelectorAll('#schem .pipe.engp');pp.forEach(x=>x.style.display=on?'':'none');}
   setTxt('engMore','');setTxt('v_eng2',fmt(cur.engKw)+' kW');setTxt('s_eng2',HYB.engines+' × J620, '+fmt(cur.expKw)+' kW exported');
   setFlow('f_eng',cur.engFuelKw>1?cur.engFuelKw/(HYB.engines*HYB.engKw/HYB.eff||1):0);setFlow('f_exp',cur.expKw>1?cur.expKw/(HYB.engines*HYB.engKw||1):0);{const fe=document.getElementById('fanE');if(fe)fe.classList.toggle('stop',!(cur.engKw>1));}
   const g2=document.getElementById('glow2');if(g2)g2.setAttribute('opacity',(0.25+0.75*Math.min(1,cur.kw/(RATED_KW*0.85))).toFixed(2));

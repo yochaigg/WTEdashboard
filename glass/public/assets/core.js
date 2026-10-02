@@ -174,7 +174,7 @@ function renderMain(){
     ['Energy delivered','MMBtu',T.kwh/KWH_PER_MMBTU,0,rw+' '+fmt(cur.kw/KWH_PER_MMBTU,1)+' MMBtu/h',1],
     [(typeof FAC!=='undefined'&&FAC.fuel==='bio'?'Biomethane replaced':'Natural gas replaced'),'Nm³',avgOf(TA,'facKw')*TA.h/NG_KWH,0,'at '+fmt(NG_KWH,1)+' kWh per Nm³',1],
     ['Ash produced','kg',T.ash,0,fmt(T.briq?T.ash/T.briq*100:0,1)+' % of feed',1],
-    ['Electricity from the engines','kWh',avgOf(TA,'engKw')*TA.h,0,rw+' '+fmt(cur.engKw)+' kW, '+fmt(cur.expKw)+' kW exported',1],
+    ...(typeof FAC!=='undefined'&&FAC.eng?[['Electricity from the engines','kWh',avgOf(TA,'engKw')*TA.h,0,rw+' '+fmt(cur.engKw)+' kW, '+fmt(cur.expKw)+' kW exported',1]]:[]),
     ['CO₂ at the furnace','kg',T.co2,0,rw+' '+fmt(cur.co2Rate)+' kg/h, mostly biogenic',1],
     ['Active alerts','',active.length,0,unack.length+' not acknowledged']
   ];
@@ -236,7 +236,7 @@ function credits(a){
 }
 function renderCarbon(){
   const {P,total,bk,ytd}=D,c=credits(total),y=credits(ytd);
-  const K=[['Net credits','tCO2e',c.net,1,P.label],['9.1 Landfill avoidance','tCO2e',c.land,1,fmt(c.waste,1)+' t waste diverted'],[(typeof FAC!=='undefined'&&FAC.fuel==='bio'?'9.2 Biomethane replaced':'9.2 Natural gas replaced'),'tCO2e',c.disp,1,fmt(c.mwh,1)+' MWh of heat delivered'+(typeof FAC!=='undefined'&&FAC.fuel==='bio'?', no credit (already renewable)':'')],['9.2 Grid power replaced','tCO2e',c.dispE||0,1,fmt(c.elecMwh||0,1)+' MWh from the engines'],['Project emissions deducted','tCO2e',-c.ded,1,cfg.fossil+' % of '+fmt(c.co2t,1)+' t CO₂ from syngas'],['Estimated value','EUR',c.net*cfg.price,0,'at '+fmt(cfg.price,2)+' EUR per tCO2e'],['Year to date net','tCO2e',y.net,1,fmt(y.waste,0)+' t waste, '+fmt(y.mwh,0)+' MWh']];
+  const K=[['Net credits','tCO2e',c.net,1,P.label],['9.1 Landfill avoidance','tCO2e',c.land,1,fmt(c.waste,1)+' t waste diverted'],[(typeof FAC!=='undefined'&&FAC.fuel==='bio'?'9.2 Biomethane replaced':'9.2 Natural gas replaced'),'tCO2e',c.disp,1,fmt(c.mwh,1)+' MWh of heat delivered'+(typeof FAC!=='undefined'&&FAC.fuel==='bio'?', no credit (already renewable)':'')],...(typeof FAC!=='undefined'&&FAC.eng?[['9.2 Grid power replaced','tCO2e',c.dispE||0,1,fmt(c.elecMwh||0,1)+' MWh from the engines']]:[]),['Project emissions deducted','tCO2e',-c.ded,1,cfg.fossil+' % of '+fmt(c.co2t,1)+' t CO₂ from syngas'],['Estimated value','EUR',c.net*cfg.price,0,'at '+fmt(cfg.price,2)+' EUR per tCO2e'],['Year to date net','tCO2e',y.net,1,fmt(y.waste,0)+' t waste, '+fmt(y.mwh,0)+' MWh']];
   renderKpis($('#ckpis'),K.map(k=>({l:k[0],u:k[1],v:k[2],d:k[3],s:k[4]})));
   const per=bk.map(b=>b.acc?credits(b.acc):null);let run=0;
   const cum=per.map(p=>{if(!p)return null;run+=p.net;return run;});
@@ -249,7 +249,7 @@ function renderCarbon(){
   $('#breakdown').innerHTML='<table>'+[
     ['Waste diverted',fmt(c.waste,1)+' t × '+fmt(cfg.land,2),'= '+fmt(c.land,1)+' tCO2e'],
     ['Natural gas replaced',fmt(c.mwh,1)+' MWh × '+fmt(cfg.disp,3)+' kg/kWh','= '+fmt(c.disp,1)+' tCO2e'],
-    ['Grid power replaced',fmt(c.elecMwh||0,1)+' MWh × '+fmt(typeof FAC!=='undefined'?FAC.gridF:0,2)+' kg/kWh','= '+fmt(c.dispE||0,1)+' tCO2e'],
+    ...(typeof FAC!=='undefined'&&FAC.eng?[['Grid power replaced',fmt(c.elecMwh||0,1)+' MWh × '+fmt(typeof FAC!=='undefined'?FAC.gridF:0,2)+' kg/kWh','= '+fmt(c.dispE||0,1)+' tCO2e']]:[]),
     ['CO₂ from burning syngas',fmt(c.co2t,1)+' t × '+cfg.fossil+' % fossil','= -'+fmt(c.ded,1)+' tCO2e'],
     ['<b>Net credits</b>','','<b>'+fmt(c.net,1)+' tCO2e</b>'],
     ['Value',fmt(c.net,1)+' × '+fmt(cfg.price,2)+' EUR','= '+fmt(c.net*cfg.price)+' EUR']
