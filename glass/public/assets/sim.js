@@ -16,7 +16,10 @@ const saleKwhPerNm3=()=>SALE_MMBTU*KWH_PER_MMBTU/1000;
 function contractKw(){return Math.ceil(TPD/24*1000*saleKwhPerNm3()*1.15/1000)*1000;}
 const ENG_KW=0;let ENGINES=2;       /* two gas booster blowers push the syngas to the factory */
 function enginesNeeded(){return 2;}
-const NG_KWH=10.0;                  /* heating value of natural gas, kWh per Nm3 (LHV), used for natural gas equivalents */
+const NG_KWH=10.0;
+/* HYBRID: the glass furnace takes what it can burn (HYB.demKw); the surplus runs gas engines (INNIO Jenbacher J620,
+   3 MW electrical each, about 34 % efficient). Their power covers the plant's own use first, the rest is exported. */
+const HYB={demKw:Infinity,engines:1,engKw:3000,eff:0.34,toEngines:true};                  /* heating value of natural gas, kWh per Nm3 (LHV), used for natural gas equivalents */
 function resetSim(){truckCache.clear();dayCache.clear();monthCache.clear();dropCache.clear();alertDayCache.clear();}
 
 function hash(n){const x=Math.sin(n*12.9898+78.233)*43758.5453;return x-Math.floor(x);}
@@ -110,10 +113,16 @@ function plant(t){
     Object.assign(p,{shutdown:true,briqRate:0,gasRate:0,genRate:0,kw:0,co2Rate:0,ashRate:0,ownKw:25*S(),reactor:60+3*noise(m,3),scrubber:30+2*noise(m,4),corona:25+noise(m,5),cooling:22+noise(m,6),
       CO:0,H2:0,CH4:0,CO2:0.04,O2:20.9,N2:79.06,tar:0,lhv:0,lhvKwh:0,eff:0,emCO:0,emNOx:0,emSO2:0,emPM:0,kv:0,press:0});
   }
+  /* split the gas between the furnace and the engines */
+  p.facKw=Math.min(p.kw,HYB.demKw);
+  const sur=p.kw-p.facKw;
+  const fuel=HYB.toEngines?Math.min(sur,HYB.engines*HYB.engKw/HYB.eff):0;
+  p.engFuelKw=fuel;p.engKw=fuel*HYB.eff;p.spareKw=sur-fuel;
+  p.expKw=Math.max(0,p.engKw-p.ownKw);p.buyKw=Math.max(0,p.ownKw-p.engKw);
   return p;
 }
 
-const WKEYS=['reactor','scrubber','corona','cooling','CO','H2','CH4','CO2','O2','N2','tar','lhv','lhvKwh','kw','eff','emCO','emNOx','emSO2','emPM','briqRate','gasRate','genRate','ashRate','co2Rate','press','ph','kv','level','ownKw'];
+const WKEYS=['reactor','scrubber','corona','cooling','CO','H2','CH4','CO2','O2','N2','tar','lhv','lhvKwh','kw','eff','emCO','emNOx','emSO2','emPM','briqRate','gasRate','genRate','ashRate','co2Rate','press','ph','kv','level','ownKw','facKw','engFuelKw','engKw','spareKw','expKw','buyKw'];
 function newAcc(){const a={h:0,s:{waste:0,trucks:0,briq:0,gas:0,toGen:0,kwh:0,ash:0,co2:0},w:{}};WKEYS.forEach(k=>a.w[k]=0);return a;}
 function addStep(a,p,h){
   a.h+=h;a.s.briq+=p.briqRate*h;a.s.gas+=p.gasRate*h;a.s.toGen+=p.genRate*h;a.s.kwh+=p.kw*h;a.s.ash+=p.ashRate*h;a.s.co2+=p.co2Rate*h;

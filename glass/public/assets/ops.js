@@ -21,7 +21,7 @@ PAGES.carbon={title:'Carbon credits',period:true,render:()=>{renderCarbon();rend
    ===================================================================== */
 const SCH={built:false,pop:null};
 function schemSVG(){
-  const W=1200,H=330;
+  const W=1200,H=362;
   const t=(x,y,c,txt,id)=>`<text x="${x}" y="${y}" class="${c}"${id?` id="${id}"`:''}>${txt}</text>`;
   const unit=(id,label,inner,lx,ly)=>`<g class="unit" id="u_${id}" data-u="${id}" tabindex="0" role="button" aria-label="${label}">${inner}${t(lx,ly,'lb',label)}${t(lx,ly+22,'vl','-','v_'+id)}${t(lx,ly+40,'sb','','s_'+id)}</g>`;
   let engines='';
@@ -35,11 +35,11 @@ function schemSVG(){
   <!-- pipes -->
   <path class="pipe" d="M128 236H168"/><path class="pipe" d="M232 232L330 96"/>
   <path class="pipe" d="M404 104H474"/><path class="pipe" d="M500 262V282H600V226"/><path class="pipe" d="M690 170H760"/><path class="pipe" d="M824 170H860V146H884M860 170V202H884"/>
-  <path class="pipe" d="M936 146H966V174H1030M936 202H966V174"/><path class="pipe" d="M368 266V300H300"/>
+  <path class="pipe" d="M936 146H966V174H1030M936 202H966V174"/><path class="pipe" d="M966 202V320H990"/><path class="pipe" d="M1050 320H1150"/><path class="pipe" d="M368 266V300H300"/>
   <!-- flows -->
   <path class="fl waste" id="f_waste" d="M128 236H168"/><path class="fl waste" id="f_belt" d="M232 232L330 96"/>
   <path class="fl gas" id="f_gas1" d="M404 104H474"/><path class="fl gas" id="f_gas2" d="M500 262V282H600V226"/><path class="fl gas" id="f_gas3" d="M690 170H760"/><path class="fl gas" id="f_gas4" d="M824 170H860V146H884M860 170V202H884"/>
-  <path class="fl gas" id="f_pow" d="M936 146H966V174H1030M936 202H966V174"/><path class="fl ash" id="f_ash" d="M368 266V300H300"/>
+  <path class="fl gas" id="f_pow" d="M936 146H966V174H1030M936 202H966V174"/><path class="fl gas" id="f_eng" d="M966 202V320H990"/><path class="fl power" id="f_exp" d="M1050 320H1150"/><path class="fl ash" id="f_ash" d="M368 266V300H300"/>
   ${unit('scale','Truck scale',`<rect class="eq" x="18" y="246" width="118" height="10" rx="2"/><path class="eq" d="M28 206h64v36H28zM92 216h22l14 14v12H92z"/><circle cx="46" cy="246" r="7" fill="#2c3843" stroke="#5d6a77"/><circle cx="110" cy="246" r="7" fill="#2c3843" stroke="#5d6a77"/>`,20,62)}
   ${unit('belt','Briquetting and belt',`<path class="eq" d="M168 200h64l-10 44h-44z"/><rect class="det" x="182" y="214" width="36" height="6" rx="2"/>`,160,62)}
   ${unit('reactor','Reactor',`<rect x="332" y="70" width="72" height="196" rx="30" fill="url(#steel)" stroke="#4a5968" stroke-width="1.5" class="eq"/><g clip-path="url(#rclip)"><ellipse id="glow" class="glow" cx="368" cy="200" rx="44" ry="80" fill="url(#ember)"/></g>`,316,30)}
@@ -49,8 +49,9 @@ function schemSVG(){
   ${unit('cooling','Gas cooler',`<rect class="eq" x="760" y="140" width="64" height="60" rx="6"/><g class="fan" id="fanc"><circle cx="792" cy="170" r="16" fill="none" stroke="#5d6a77" stroke-width="1.5"/><path d="M792 154v32M776 170h32" stroke="#5d6a77" stroke-width="1.5"/></g>`,748,250)}
   ${unit('gen','Gas boosters',`${engines}<text id="engMore" x="910" y="250" class="sb" text-anchor="middle"></text>`,840,62)}
   ${unit('grid','Glass factory furnace',`<path class="eq" d="M1030 290V170l26-22v22l26-22v22l26-22v22l26-22v142z"/><rect class="eq" x="1108" y="118" width="14" height="40"/><rect x="1046" y="228" width="92" height="40" rx="4" fill="#1a1f25" stroke="#4a5968"/><rect id="glow2" x="1050" y="232" width="84" height="32" rx="3" fill="url(#ember)"/><path d="M1060 256h64" stroke="#ffd27a" stroke-width="2" opacity=".6"/>`,1010,62)}
+  ${unit('eng2','Engines for surplus gas',`<rect class="eq" x="990" y="304" width="60" height="32" rx="4"/><g class="fan" id="fanE"><circle cx="1032" cy="320" r="9" fill="none" stroke="#5d6a77" stroke-width="1.5"/><path d="M1032 311v18M1023 320h18" stroke="#5d6a77" stroke-width="1.5"/></g><path d="M1160 356l12-58 12 58M1164 336h16M1167 316h10" stroke="#5d6a77" fill="none" stroke-width="1.5"/>`,820,306)}
   </svg></div>
-  <div class="legend2"><span><i style="background:var(--waste)"></i>Waste and briquets</span><span><i style="background:var(--gas)"></i>Syngas</span><span><i style="background:var(--ash)"></i>Ash</span></div>`;
+  <div class="legend2"><span><i style="background:var(--waste)"></i>Waste and briquets</span><span><i style="background:var(--gas)"></i>Syngas</span><span><i style="background:var(--power)"></i>Electricity</span><span><i style="background:var(--ash)"></i>Ash</span></div>`;
 }
 function setFlow(id,ratio){const el=document.getElementById(id);if(!el)return;const stop=!(ratio>0.02);el.classList.toggle('stop',stop);if(!stop){const d=(2.2/Math.max(.25,Math.min(2,ratio))).toFixed(2)+'s';if(el.style.animationDuration!==d)el.style.animationDuration=d;}}
 function setTxt(id,v){const el=document.getElementById(id);if(el&&el.textContent!==v)el.textContent=v;}
@@ -68,7 +69,8 @@ function renderSchematic(){
   setTxt('v_cooling',fmt(cur.cooling)+' °C');setTxt('s_cooling',fmt(cur.genRate)+' Nm³/h to the factory');
   setTxt('v_gen',fmt(cur.genRate)+' Nm³/h');setTxt('s_gen',ENGINES+' blowers, gas at '+fmt(cur.cooling)+' °C');
   setTxt('v_grid',fmt(cur.kw/KWH_PER_MMBTU,1)+' MMBtu/h');setTxt('s_grid','heat, '+fmt(cur.kw/NG_KWH)+' Nm³/h of natural gas');
-  setTxt('engMore','');
+  setTxt('engMore','');setTxt('v_eng2',fmt(cur.engKw)+' kW');setTxt('s_eng2',HYB.engines+' × J620, '+fmt(cur.expKw)+' kW exported');
+  setFlow('f_eng',cur.engFuelKw>1?cur.engFuelKw/(HYB.engines*HYB.engKw/HYB.eff||1):0);setFlow('f_exp',cur.expKw>1?cur.expKw/(HYB.engines*HYB.engKw||1):0);{const fe=document.getElementById('fanE');if(fe)fe.classList.toggle('stop',!(cur.engKw>1));}
   const g2=document.getElementById('glow2');if(g2)g2.setAttribute('opacity',(0.25+0.75*Math.min(1,cur.kw/(RATED_KW*0.85))).toFixed(2));
   for(let i=0;i<2;i++){const f=document.getElementById('fan'+i);if(f)f.classList.toggle('stop',!(cur.genRate>1));}
   const fc=document.getElementById('fanc');if(fc)fc.classList.toggle('stop',!(cur.genRate>1));
@@ -92,6 +94,7 @@ const UNIT_INFO={
   scrubber:{t:'Scrubber',rows:c=>[['Temperature',fmt(c.scrubber)+' °C'],['Water pH',fmt(c.ph,2)],['Water level',fmt(c.level)+' %']],ana:true,go:[['Maintenance','maint']]},
   corona:{t:'Corona filter',rows:c=>[['Temperature',fmt(c.corona)+' °C'],['Voltage',fmt(c.kv,1)+' kV'],['Tar after filter',fmt(c.tar)+' mg/Nm³']],ana:true,go:[['Maintenance','maint']]},
   cooling:{t:'Gas cooler',rows:c=>[['Gas temperature out',fmt(c.cooling)+' °C'],['Gas to the factory',fmt(c.genRate)+' Nm³/h'],['Heating value',fmt(c.lhv,2)+' MJ/Nm³']]},
+  eng2:{t:'Engines for surplus gas',rows:c=>[['Engines',HYB.engines+' × INNIO Jenbacher J620'],['Gas to the engines',fmt(c.engFuelKw/KWH_PER_MMBTU,1)+' MMBtu/h'],['Electricity made',fmt(c.engKw)+' kW'],['Plant own use',fmt(c.ownKw)+' kW'],['Exported',fmt(c.expKw)+' kW']],ana:true,go:[['Gas sales','grid'],['Maintenance','maint']]},
   gen:{t:'Gas booster blowers',rows:c=>[['Gas flow',fmt(c.genRate)+' Nm³/h'],['Blowers running',String(ENGINES)],['Gas temperature',fmt(c.cooling)+' °C'],['Electricity bought by the plant',fmt(c.ownKw)+' kW']],ana:true,go:[['Maintenance','maint']]},
   grid:{t:'Glass factory furnace',rows:c=>[['Energy delivered',fmt(c.kw/KWH_PER_MMBTU,1)+' MMBtu/h'],['Contract capacity',fmt(RATED_KW/KWH_PER_MMBTU,0)+' MMBtu/h'],['Heating value',fmt(c.lhv,2)+' MJ/Nm³'],['Natural gas replaced',fmt(c.kw/NG_KWH)+' Nm³/h']],ana:true,go:[['Gas sales','grid'],['Finance','finance']]}
 };
