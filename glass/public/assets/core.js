@@ -173,9 +173,9 @@ function renderMain(){
     ['Gas to the factory','Nm³',T.toGen,0,rw+' '+fmt(cur.genRate)+' Nm³/h',1],
     ['Energy delivered','MMBtu',T.kwh/KWH_PER_MMBTU,0,rw+' '+fmt(cur.kw/KWH_PER_MMBTU,1)+' MMBtu/h',1],
     [(typeof FAC!=='undefined'&&FAC.fuel==='bio'?'Biomethane replaced':'Natural gas replaced'),'Nm³',avgOf(TA,'facKw')*TA.h/NG_KWH,0,'at '+fmt(NG_KWH,1)+' kWh per Nm³',1],
-    ['Ash produced','kg',T.ash,0,fmt(T.briq?T.ash/T.briq*100:0,1)+' % of feed',1],
+    ['Ash produced','t',T.ash/1000,1,fmt(T.briq?T.ash/T.briq*100:0,1)+' % of feed',1],
     ...(typeof FAC!=='undefined'&&FAC.eng?[['Electricity from the engines','kWh',avgOf(TA,'engKw')*TA.h,0,rw+' '+fmt(cur.engKw)+' kW, '+fmt(cur.expKw)+' kW exported',1]]:[]),
-    ['CO₂ at the furnace','kg',T.co2,0,rw+' '+fmt(cur.co2Rate)+' kg/h, mostly biogenic',1],
+    ['CO₂ at the furnace','t',T.co2/1000,1,rw+' '+fmt(cur.co2Rate/1000,2)+' t/h, mostly biogenic',1],
     ['Active alerts','',active.length,0,unack.length+' not acknowledged']
   ];
   renderKpis($('#kpis'),K.map(k=>({l:k[0]+(live&&k[5]?', today':''),u:k[1],v:k[2],d:k[3],s:k[4],nf:live&&k[5]})));
@@ -546,7 +546,7 @@ function renderAnalysis(){
     {l:'Duration',u:'min',v:I.durMin,d:0,s:dt(ev.t0)+' to '+hhmm(r.ev.t1)},
     {l:'Lowest heat delivery',u:'kW',v:I.kwMin,d:0,s:'normal '+fmt(I.kwBase)+' kW'},
     {l:'Heat delivery change',u:'%',v:R.kw.rel*100,d:0,s:'at the worst point'},
-    {l:'Heat not delivered',u:'kWh',v:I.lostKwh,d:0,s:fmt(I.briqLostKg)+' kg briquets not fed'},
+    {l:'Heat not delivered',u:'kWh',v:I.lostKwh,d:0,s:fmt(I.briqLostKg/1000,2)+' t briquets not fed'},
     {l:'Credits not earned',u:'tCO2e',v:cr,d:1,s:'natural gas replacement part'},
     {l:'Value',u:'EUR',v:cr*cfg.price,d:0,s:'at '+fmt(cfg.price,2)+' EUR per tCO2e'}
   ]);
@@ -575,7 +575,7 @@ $('#anaCsv').addEventListener('click',()=>{
   const r=AN.res;if(!r)return;const ev=r.ev;
   const rows=metaRows([['Analysis',ev.title],['Event start',tsf(ev.t0)],['Event end',tsf(ev.t1)],['Row size','2 minutes'],['Normal level','average from 90 to 15 minutes before the event start']]);
   rows.push(['Time','In event'].concat(AN_PARAMS.map(a=>a[1]+' ('+a[2]+')')));
-  r.P.forEach((p,i)=>rows.push([tsf(r.ts[i]),i>=r.i0&&i<=r.i1?'yes':''].concat(AN_PARAMS.map(a=>r1(p[a[0]],a[3]+1)))));
+  r.P.forEach((p,i)=>rows.push([tsf(r.ts[i]),i>=r.i0&&i<=r.i1?'yes':''].concat(AN_PARAMS.map(a=>r1(p[a[0]]*(a[4]||1),a[3]+1)))));
   rows.push([]);rows.push(['Normal level',''].concat(AN_PARAMS.map(a=>r1(r.R[a[0]].base,a[3]+1))));
   rows.push(['Worst value',''].concat(AN_PARAMS.map(a=>r1(r.R[a[0]].ext,a[3]+1))));
   download('wte-analysis_'+fileTag()+'_'+slug(hhmm(ev.t0))+'.csv',csvText(rows));

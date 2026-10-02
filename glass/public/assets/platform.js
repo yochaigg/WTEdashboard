@@ -172,13 +172,13 @@ const METRICS=[
   {k:'power',re:/heat|deliver|factory|furnace|glass|kw\b|kwh|mwh|energy|output|power|natural gas/,label:'heat delivered to the factory',rate:'kw',unit:'kW',tot:a=>a.s.kwh/1000,totU:'MWh',dec:0},
   {k:'waste',re:/waste|tons?\b|tonnes?|truck|deliver|scale/,label:'waste received',tot:a=>a.s.waste,totU:'t',dec:1,trucks:true},
   {k:'gas',re:/syngas|\bgas\b|gas flow/,label:'syngas',rate:'gasRate',unit:'Nm³/h',tot:a=>a.s.gas,totU:'Nm³',dec:0},
-  {k:'briq',re:/briquet|feed|conveyor|belt/,label:'briquet feed',rate:'briqRate',unit:'kg/h',tot:a=>a.s.briq/1000,totU:'t',dec:1},
+  {k:'briq',re:/briquet|feed|conveyor|belt/,label:'briquet feed',rate:'briqRate',unit:'t/h',sc:0.001,tot:a=>a.s.briq/1000,totU:'t',dec:1},
   {k:'reactor',re:/reactor|gasifier/,label:'reactor temperature',rate:'reactor',unit:'°C',dec:0},
   {k:'scrubber',re:/scrubber/,label:'scrubber temperature',rate:'scrubber',unit:'°C',dec:0},
   {k:'h2',re:/hydrogen|\bh2\b/,label:'hydrogen in syngas',rate:'H2',unit:'%',dec:1},
   {k:'o2',re:/oxygen|\bo2\b/,label:'oxygen in syngas',rate:'O2',unit:'%',dec:2},
   {k:'tar',re:/\btar\b|corona/,label:'tar after the corona filter',rate:'tar',unit:'mg/Nm³',dec:0},
-  {k:'ash',re:/\bash\b/,label:'ash',rate:'ashRate',unit:'kg/h',tot:a=>a.s.ash,totU:'kg',dec:0},
+  {k:'ash',re:/\bash\b/,label:'ash',rate:'ashRate',unit:'t/h',sc:0.001,tot:a=>a.s.ash/1000,totU:'t',dec:2},
   {k:'credits',re:/credit|carbon|co2e/,label:'net carbon credits',tot:a=>credits(a).net,totU:'tCO2e',dec:1},
   {k:'money',re:/revenue|profit|money|ebitda|earn|income|euro|€/,label:'money',money:true},
   {k:'alerts',re:/alert|alarm/,label:'alerts',alerts:true}
@@ -213,7 +213,7 @@ function accRange(t0,t1){   /* uses cached whole days where possible */
 function seriesFor(M,w){
   const n=48,step=(w.t1-w.t0)/n,labels=[],vals=[];const long=w.t1-w.t0>2*DAY;
   for(let i=0;i<n;i++){const t=w.t0+step*(i+0.5);labels.push(long?new Date(t).toLocaleDateString('en-GB',{day:'numeric',month:'short'}):hhmm(t));
-    if(M.rate){if(long){const a=integrate(w.t0+step*i,w.t0+step*(i+1));vals.push(avgOf(a,M.rate));}else vals.push(plant(t)[M.rate]);}
+    if(M.rate){if(long){const a=integrate(w.t0+step*i,w.t0+step*(i+1));vals.push(avgOf(a,M.rate)*(M.sc||1));}else vals.push(plant(t)[M.rate]*(M.sc||1));}
     else if(M.trucks)vals.push(trucksBetween(w.t0+step*i,w.t0+step*(i+1)).reduce((s,k)=>s+k.tons,0));
     else vals.push(null);}
   return {labels,vals};
@@ -254,7 +254,7 @@ function answer(qRaw){
       res.acts.push(['Open the full analysis',()=>openAnalysis(sc,Math.max(0,wi))]);
       const M2=M||METRICS[0];if(M2.rate)res.chart={...seriesFor(M2,{t0:ev.t0-3*HOUR,t1:Math.min(now,ev.t1+3*HOUR)}),name:M2.label+' around '+hhmm(ev.t0),unit:M2.unit};
       return res;}
-    const M2=M||METRICS[0],a=accRange(w.t0,w.t1),prev=accRange(w.t0-(w.t1-w.t0),w.t0);const v=M2.rate?avgOf(a,M2.rate):0,pv=M2.rate?avgOf(prev,M2.rate):0;
+    const M2=M||METRICS[0],a=accRange(w.t0,w.t1),prev=accRange(w.t0-(w.t1-w.t0),w.t0);const v=M2.rate?avgOf(a,M2.rate)*(M2.sc||1):0,pv=M2.rate?avgOf(prev,M2.rate)*(M2.sc||1):0;
     res.html=`Nothing unusual ${w.label}: no output drops and no alerts.`+(M2.rate?` ${M2.label[0].toUpperCase()+M2.label.slice(1)} averaged <b>${fmt(v,M2.dec)} ${M2.unit}</b>, ${pv?fmt(Math.abs(v-pv)/pv*100,1)+' % '+(v>=pv?'above':'below')+' the period before':''}.`:'');
     if(M2.rate)res.chart={...seriesFor(M2,w),name:M2.label,unit:M2.unit};return res;}
   const m=M||METRICS[0];
@@ -268,19 +268,19 @@ function answer(qRaw){
     res.acts.push(['Open finance',()=>gotoScreen('finance')]);return res;}
   /* compare with the period before */
   if(cmp){const len=w.t1-w.t0,sh=len<=DAY?DAY:len,a=accRange(w.t0,w.t1),b=accRange(w.t0-sh,w.t1-sh);
-    const va=m.tot?m.tot(a):avgOf(a,m.rate),vb=m.tot?m.tot(b):avgOf(b,m.rate),u=m.tot?m.totU:m.unit;
+    const va=m.tot?m.tot(a):avgOf(a,m.rate)*(m.sc||1),vb=m.tot?m.tot(b):avgOf(b,m.rate)*(m.sc||1),u=m.tot?m.totU:m.unit;
     res.html=`${m.label[0].toUpperCase()+m.label.slice(1)} ${w.label}: <b>${fmt(va,m.dec)} ${u}</b>, against ${fmt(vb,m.dec)} ${u} ${sh===DAY?'over the same hours the day before':'in the period before'}. That is ${vb?fmt(Math.abs(va-vb)/Math.abs(vb)*100,1)+' % '+(va>=vb?'more':'less'):'a change from zero'}.`;
     if(m.rate)res.chart={...seriesFor(m,{t0:w.t0-sh,t1:w.t1}),name:m.label,unit:m.unit};return res;}
   /* peak or low */
   if(ext&&m.rate){const lowq=/lowest|minimum|\bmin\b|worst/.test(q);let best=null,bt=0;const step=Math.max(MIN,(w.t1-w.t0)/600);
-    for(let t=w.t0;t<w.t1;t+=step){const v=plant(t)[m.rate];if(best==null||(lowq?v<best:v>best)){best=v;bt=t;}}
+    for(let t=w.t0;t<w.t1;t+=step){const v=plant(t)[m.rate]*(m.sc||1);if(best==null||(lowq?v<best:v>best)){best=v;bt=t;}}
     res.html=`The ${lowq?'lowest':'highest'} ${m.label} ${w.label} was <b>${fmt(best,m.dec)} ${m.unit}</b> at ${dt(bt)}.`;res.chart={...seriesFor(m,w),name:m.label,unit:m.unit};
     res.acts.push(['Analyze that moment',()=>openAnalysis([{t0:bt-5*MIN,t1:bt+5*MIN,title:(lowq?'Lowest ':'Highest ')+m.label,kind:'point'}],0)]);return res;}
   /* totals and averages */
   const a=accRange(w.t0,w.t1);
-  if(w.point&&m.rate){const v=plant(w.point)[m.rate];res.html=`${m.label[0].toUpperCase()+m.label.slice(1)} at ${hhmm(w.point)}${w.point<dayStart(now)?' on '+fd(w.point):''} was <b>${fmt(v,m.dec)} ${m.unit}</b>.`;}
-  else if(m.tot){res.html=`${m.label[0].toUpperCase()+m.label.slice(1)} ${w.label}: <b>${fmt(m.tot(a),m.dec)} ${m.totU}</b>`+(m.rate?`, an average of ${fmt(avgOf(a,m.rate),m.dec)} ${m.unit}`:'')+(m.trucks?` from ${a.s.trucks} trucks`:'')+'.';}
-  else res.html=`${m.label[0].toUpperCase()+m.label.slice(1)} ${w.label} averaged <b>${fmt(avgOf(a,m.rate),m.dec)} ${m.unit}</b>.`;
+  if(w.point&&m.rate){const v=plant(w.point)[m.rate]*(m.sc||1);res.html=`${m.label[0].toUpperCase()+m.label.slice(1)} at ${hhmm(w.point)}${w.point<dayStart(now)?' on '+fd(w.point):''} was <b>${fmt(v,m.dec)} ${m.unit}</b>.`;}
+  else if(m.tot){res.html=`${m.label[0].toUpperCase()+m.label.slice(1)} ${w.label}: <b>${fmt(m.tot(a),m.dec)} ${m.totU}</b>`+(m.rate?`, an average of ${fmt(avgOf(a,m.rate)*(m.sc||1),m.dec)} ${m.unit}`:'')+(m.trucks?` from ${a.s.trucks} trucks`:'')+'.';}
+  else res.html=`${m.label[0].toUpperCase()+m.label.slice(1)} ${w.label} averaged <b>${fmt(avgOf(a,m.rate)*(m.sc||1),m.dec)} ${m.unit}</b>.`;
   if(m.rate||m.trucks)res.chart={...seriesFor(m,w),name:m.label+(m.trucks?' (t)':''),unit:m.unit||'t'};
   return res;
 }

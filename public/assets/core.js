@@ -172,8 +172,8 @@ function renderMain(){
     ['Syngas out of reactor','Nm³',T.gas,0,rw+' '+fmt(cur.gasRate)+' Nm³/h',1],
     ['Gas to generator','Nm³',T.toGen,0,rw+' '+fmt(cur.genRate)+' Nm³/h',1],
     ['Power generated','MWh',T.kwh/1000,1,rw+' '+fmt(cur.kw/1000,2)+' MW',1],
-    ['Ash produced','kg',T.ash,0,fmt(T.briq?T.ash/T.briq*100:0,1)+' % of feed',1],
-    ['Generator CO₂','kg',T.co2,0,rw+' '+fmt(cur.co2Rate)+' kg/h',1],
+    ['Ash produced','t',T.ash/1000,1,fmt(T.briq?T.ash/T.briq*100:0,1)+' % of feed',1],
+    ['Generator CO₂','t',T.co2/1000,1,rw+' '+fmt(cur.co2Rate/1000,2)+' t/h',1],
     ['Active alerts','',active.length,0,unack.length+' not acknowledged']
   ];
   renderKpis($('#kpis'),K.map(k=>({l:k[0]+(live&&k[5]?', today':''),u:k[1],v:k[2],d:k[3],s:k[4],nf:live&&k[5]})));
@@ -214,7 +214,7 @@ function renderMain(){
   $('#anLbl').textContent='('+rw+')';$('#emLbl').textContent='('+rw+')';$('#phLbl').textContent='('+rw+')';
   const chip=(v,warn,crit)=>`<span class="pill ${v>crit?'crit':v>warn?'warn':'ok'}">${v>crit?'high':v>warn?'watch':'ok'}</span>`;
   $('#analyzer').innerHTML='<table>'+[['CO','%',cur.CO,1],['H₂','%',cur.H2,1],['CH₄','%',cur.CH4,2],['CO₂','%',cur.CO2,1],['O₂','%',cur.O2,2],['N₂ (balance)','%',cur.N2,1],['Heating value','MJ/Nm³',cur.lhv,2],['Heating value','kWh/Nm³',cur.lhvKwh,2],['Tar after corona','mg/Nm³',cur.tar,0]].map(r=>`<tr><td>${r[0]}</td><td class="r">${fmt(r[2],r[3])} ${r[1]}</td><td class="r">${r[0]==='O₂'?chip(r[2],1.0,1.5):r[0].startsWith('Tar')?chip(r[2],50,80):''}</td></tr>`).join('')+'</table>';
-  $('#emis').innerHTML='<table>'+[['CO',cur.emCO,400,500],['NOx',cur.emNOx,300,400],['SO₂',cur.emSO2,150,200],['Particulates',cur.emPM,15,20]].map(r=>`<tr><td>${r[0]}</td><td class="r">${fmt(r[1])} mg/Nm³</td><td class="r">${chip(r[1],r[2],r[3])}</td></tr>`).join('')+`<tr><td>CO₂ (flue)</td><td class="r">${fmt(cur.co2Rate)} kg/h</td><td></td></tr></table>`;
+  $('#emis').innerHTML='<table>'+[['CO',cur.emCO,400,500],['NOx',cur.emNOx,300,400],['SO₂',cur.emSO2,150,200],['Particulates',cur.emPM,15,20]].map(r=>`<tr><td>${r[0]}</td><td class="r">${fmt(r[1])} mg/Nm³</td><td class="r">${chip(r[1],r[2],r[3])}</td></tr>`).join('')+`<tr><td>CO₂ (flue)</td><td class="r">${fmt(cur.co2Rate/1000,2)} t/h</td><td></td></tr></table>`;
   const sy=total.s.briq?total.s.gas/total.s.briq:0,kpt=total.s.briq?total.s.kwh/(total.s.briq/1000):0;
   $('#eff').innerHTML='<table>'+[['Syngas yield',fmt(sy*1000)+' Nm³/t briquet'],['Electricity',fmt(kpt/1000,2)+' MWh/t briquet'],['Gas to power efficiency',fmt(avgOf(total,'eff')*100,1)+' %'],['Generator load',fmt(avgOf(total,'kw')/RATED_KW*100,0)+' % of rated']].map(r=>`<tr><td>${r[0]}</td><td class="r">${r[1]}</td></tr>`).join('')+'</table>';
   $('#genLbl').textContent=ENGINES+' × INNIO Jenbacher J620';
@@ -541,9 +541,9 @@ function renderAnalysis(){
   }else sel.parentElement.style.display='none';
   renderKpis($('#anaK'),[
     {l:'Duration',u:'min',v:I.durMin,d:0,s:dt(ev.t0)+' to '+hhmm(r.ev.t1)},
-    {l:'Lowest power',u:'kW',v:I.kwMin,d:0,s:'normal '+fmt(I.kwBase)+' kW'},
+    {l:'Lowest power',u:'MW',v:I.kwMin/1000,d:2,s:'normal '+fmt(I.kwBase/1000,2)+' MW'},
     {l:'Power change',u:'%',v:R.kw.rel*100,d:0,s:'at the worst point'},
-    {l:'Energy not generated',u:'kWh',v:I.lostKwh,d:0,s:fmt(I.briqLostKg)+' kg briquets not fed'},
+    {l:'Energy not generated',u:'MWh',v:I.lostKwh/1000,d:2,s:fmt(I.briqLostKg/1000,2)+' t briquets not fed'},
     {l:'Credits not earned',u:'tCO2e',v:cr,d:1,s:'fossil replacement part'},
     {l:'Value',u:'EUR',v:cr*cfg.price,d:0,s:'at '+fmt(cfg.price,2)+' EUR per tCO2e'}
   ]);
@@ -572,7 +572,7 @@ $('#anaCsv').addEventListener('click',()=>{
   const r=AN.res;if(!r)return;const ev=r.ev;
   const rows=metaRows([['Analysis',ev.title],['Event start',tsf(ev.t0)],['Event end',tsf(ev.t1)],['Row size','2 minutes'],['Normal level','average from 90 to 15 minutes before the event start']]);
   rows.push(['Time','In event'].concat(AN_PARAMS.map(a=>a[1]+' ('+a[2]+')')));
-  r.P.forEach((p,i)=>rows.push([tsf(r.ts[i]),i>=r.i0&&i<=r.i1?'yes':''].concat(AN_PARAMS.map(a=>r1(p[a[0]],a[3]+1)))));
+  r.P.forEach((p,i)=>rows.push([tsf(r.ts[i]),i>=r.i0&&i<=r.i1?'yes':''].concat(AN_PARAMS.map(a=>r1(p[a[0]]*(a[4]||1),a[3]+1)))));
   rows.push([]);rows.push(['Normal level',''].concat(AN_PARAMS.map(a=>r1(r.R[a[0]].base,a[3]+1))));
   rows.push(['Worst value',''].concat(AN_PARAMS.map(a=>r1(r.R[a[0]].ext,a[3]+1))));
   download('wte-analysis_'+fileTag()+'_'+slug(hhmm(ev.t0))+'.csv',csvText(rows));

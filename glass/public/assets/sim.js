@@ -285,7 +285,7 @@ function eventsBetween(t0,t1){
 }
 
 /* drill-down analysis of one event window */
-const AN_PARAMS=[['kw','Heat delivered','kW',0],['briqRate','Briquet feed','kg/h',0],['gasRate','Gas out of reactor','Nm³/h',0],['genRate','Gas to the factory','Nm³/h',0],['reactor','Reactor temperature','°C',0],['scrubber','Scrubber temperature','°C',0],['corona','Corona temperature','°C',0],['cooling','Cooling temperature','°C',0],['O2','Syngas O₂','%',2],['CO','Syngas CO','%',1],['H2','Syngas H₂','%',1],['lhv','Heating value','MJ/Nm³',2],['tar','Tar after corona','mg/Nm³',0],['press','Reactor pressure','mbar',1]];
+const AN_PARAMS=[['kw','Heat delivered','kW',0],['briqRate','Briquet feed','t/h',2,0.001],['gasRate','Gas out of reactor','Nm³/h',0],['genRate','Gas to the factory','Nm³/h',0],['reactor','Reactor temperature','°C',0],['scrubber','Scrubber temperature','°C',0],['corona','Corona temperature','°C',0],['cooling','Cooling temperature','°C',0],['O2','Syngas O₂','%',2],['CO','Syngas CO','%',1],['H2','Syngas H₂','%',1],['lhv','Heating value','MJ/Nm³',2],['tar','Tar after corona','mg/Nm³',0],['press','Reactor pressure','mbar',1]];
 function analyzeEvent(evIn){
   const now=Date.now(),ev=Object.assign({},evIn);
   ev.t1=Math.min(Math.max(ev.t1,ev.t0+MIN),now);
@@ -295,7 +295,7 @@ function analyzeEvent(evIn){
   const bEnd=ev.t0-15*MIN;let nb=0;while(nb<n&&ts[nb]<bEnd)nb++;
   let i0=0;while(i0<n-1&&ts[i0]<ev.t0)i0++;
   let i1=n-1;while(i1>i0&&ts[i1]>ev.t1)i1--;
-  const rows=AN_PARAMS.map(([k,label,unit,dec])=>{
+  const rows=AN_PARAMS.map(([k,label,unit,dec,sc0])=>{const sc=sc0||1;
     let sum=0;for(let i=0;i<nb;i++)sum+=P[i][k];
     const base=nb?sum/nb:P[0][k];
     let v2=0;for(let i=0;i<nb;i++)v2+=Math.pow(P[i][k]-base,2);
@@ -308,14 +308,14 @@ function analyzeEvent(evIn){
       if(ts[i]<ev.t0-60*MIN)continue;
       if(Math.abs(P[i][k]-base)>thr&&(i+1>i1||Math.abs(P[i+1][k]-base)>thr)){onset=(ts[i]-ev.t0)/MIN;break;}
     }
-    return {key:k,label,unit,dec,base,ext,change,rel:base?change/Math.abs(base):0,moved,onset,thr};
+    return {key:k,label,unit,dec,base:base*sc,ext:ext*sc,change:change*sc,rel:base?change/Math.abs(base):0,moved,onset,thr:thr*sc,rawBase:base};
   });
   const R={};rows.forEach(r=>{R[r.key]=r;});
   const bin=o=>o==null?1e9:Math.round(o/4);
   const mv=rows.filter(r=>r.moved).sort((a,b)=>(bin(a.onset)-bin(b.onset))||(Math.abs(b.rel)-Math.abs(a.rel)));
   const still=rows.filter(r=>!r.moved);
   let lost=0,briqLost=0,kwMin=Infinity;
-  for(let i=i0;i<=i1;i++){lost+=Math.max(0,R.kw.base-P[i].kw);briqLost+=Math.max(0,R.briqRate.base-P[i].briqRate);kwMin=Math.min(kwMin,P[i].kw);}
+  for(let i=i0;i<=i1;i++){lost+=Math.max(0,R.kw.rawBase-P[i].kw);briqLost+=Math.max(0,R.briqRate.rawBase-P[i].briqRate);kwMin=Math.min(kwMin,P[i].kw);}
   const impact={durMin:(ev.t1-ev.t0)/MIN,kwBase:R.kw.base,kwMin,lostKwh:lost*step/HOUR,briqLostKg:briqLost*step/HOUR};
   const hints=[],pc=k=>Math.round(Math.abs(R[k].rel)*100);
   if(R.briqRate.moved&&R.briqRate.rel<-0.15&&R.reactor.moved&&R.reactor.change<-30)hints.push('Feed interruption pattern: briquet feed fell '+pc('briqRate')+' %, the reactor cooled by '+Math.round(-R.reactor.change)+' °C, then gas flow and heat to the factory followed. Check the conveyor and feeder, the briquet hopper (bridging or a jam) and briquet supply.');
