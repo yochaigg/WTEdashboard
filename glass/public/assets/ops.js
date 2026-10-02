@@ -58,7 +58,7 @@ function renderSchematic(){
   const host=$('#schem');if(!host)return;
   if(!SCH.built){host.innerHTML=schemSVG();SCH.built=true;}
   const {cur,total,P}=D,live=state.mode==='live',rw=live?'now':'avg';
-  const nomBriq=1100*S(),nomGas=nomBriq*2.0;
+  const nomBriq=1100*S(),nomGas=nomBriq*1.1715;
   const sc=live&&D.todayS?D.todayS:total.s;setTxt('v_scale',fmt(sc.waste,1)+' t');setTxt('s_scale',fmt(sc.trucks)+' trucks, '+(live?'today':P.label.toLowerCase()));
   setTxt('v_belt',fmt(cur.briqRate)+' kg/h');setTxt('s_belt',rw+' briquet feed');
   setTxt('v_reactor',fmt(cur.reactor)+' °C');setTxt('s_reactor',fmt(cur.gasRate)+' Nm³/h syngas out');
@@ -67,7 +67,7 @@ function renderSchematic(){
   setTxt('v_corona',fmt(cur.corona)+' °C');setTxt('s_corona',fmt(cur.kv,1)+' kV, tar '+fmt(cur.tar)+' mg/Nm³');
   setTxt('v_cooling',fmt(cur.cooling)+' °C');setTxt('s_cooling',fmt(cur.genRate)+' Nm³/h to the factory');
   setTxt('v_gen',fmt(cur.genRate)+' Nm³/h');setTxt('s_gen',ENGINES+' blowers, gas at '+fmt(cur.cooling)+' °C');
-  setTxt('v_grid',fmt(cur.kw/1000,1)+' MW');setTxt('s_grid','heat, '+fmt(cur.kw/NG_KWH)+' Nm³/h of natural gas');
+  setTxt('v_grid',fmt(cur.kw/KWH_PER_MMBTU,1)+' MMBtu/h');setTxt('s_grid','heat, '+fmt(cur.kw/NG_KWH)+' Nm³/h of natural gas');
   setTxt('engMore','');
   const g2=document.getElementById('glow2');if(g2)g2.setAttribute('opacity',(0.25+0.75*Math.min(1,cur.kw/(RATED_KW*0.85))).toFixed(2));
   for(let i=0;i<2;i++){const f=document.getElementById('fan'+i);if(f)f.classList.toggle('stop',!(cur.genRate>1));}
@@ -93,7 +93,7 @@ const UNIT_INFO={
   corona:{t:'Corona filter',rows:c=>[['Temperature',fmt(c.corona)+' °C'],['Voltage',fmt(c.kv,1)+' kV'],['Tar after filter',fmt(c.tar)+' mg/Nm³']],ana:true,go:[['Maintenance','maint']]},
   cooling:{t:'Gas cooler',rows:c=>[['Gas temperature out',fmt(c.cooling)+' °C'],['Gas to the factory',fmt(c.genRate)+' Nm³/h'],['Heating value',fmt(c.lhv,2)+' MJ/Nm³']]},
   gen:{t:'Gas booster blowers',rows:c=>[['Gas flow',fmt(c.genRate)+' Nm³/h'],['Blowers running',String(ENGINES)],['Gas temperature',fmt(c.cooling)+' °C'],['Electricity bought by the plant',fmt(c.ownKw)+' kW']],ana:true,go:[['Maintenance','maint']]},
-  grid:{t:'Glass factory furnace',rows:c=>[['Heat delivered',fmt(c.kw/1000,2)+' MW'],['Contract capacity',fmt(RATED_KW/1000,1)+' MW'],['Heating value',fmt(c.lhv,2)+' MJ/Nm³'],['Natural gas replaced',fmt(c.kw/NG_KWH)+' Nm³/h']],ana:true,go:[['Gas sales','grid'],['Finance','finance']]}
+  grid:{t:'Glass factory furnace',rows:c=>[['Energy delivered',fmt(c.kw/KWH_PER_MMBTU,1)+' MMBtu/h'],['Contract capacity',fmt(RATED_KW/KWH_PER_MMBTU,0)+' MMBtu/h'],['Heating value',fmt(c.lhv,2)+' MJ/Nm³'],['Natural gas replaced',fmt(c.kw/NG_KWH)+' Nm³/h']],ana:true,go:[['Gas sales','grid'],['Finance','finance']]}
 };
 function fillPop(pop){const u=UNIT_INFO[pop.dataset.u];if(!u||!D)return;pop.querySelector('tbody').innerHTML=u.rows(D.cur).map(r=>`<tr><td>${r[0]}</td><td class="r num">${r[1]}</td></tr>`).join('');}
 function openPop(id,anchor){
@@ -278,7 +278,7 @@ PAGES.suppliers={title:'Suppliers',period:true,render:renderSuppliers,csv:()=>{c
 /* =====================================================================
    Mass and energy balance (Sankey)
    ===================================================================== */
-const BAL=Object.assign({feedMJ:21,gasDens:1.05,own:8},lsGet('wtg_bal',{}));
+const BAL=Object.assign({feedMJ:21,gasDens:0.62,own:0},lsGet('wtg_bal2',{}));
 function sankey(nodes,links,W,H,unit,dec){
   const cols=Math.max(...nodes.map(n=>n.col))+1,pad=18,nw=14,top=26;
   const byId={};nodes.forEach(n=>{n.in=0;n.out=0;byId[n.id]=n;});
@@ -300,12 +300,13 @@ function balanceData(){
   const T=D.total.s,avgLhv=avgOf(D.total,'lhvKwh')||0;
   const waste=T.waste,briq=T.briq/1000,gasT=T.gas*BAL.gasDens/1000,ash=T.ash/1000;
   const prep=waste-briq,air=Math.max(0,gasT+ash-briq);
-  const feedMWh=briq*BAL.feedMJ/3.6,synMWh=T.gas*avgLhv/1000,toGenMWh=T.toGen*avgLhv/1000,elec=T.kwh/1000,own=avgOf(D.total,'ownKw')*D.total.h/1000;
-  return {waste,briq,gasT,ash,prep,air,feedMWh,synMWh,toGenMWh,elec,own,exp:elec,cge:feedMWh?synMWh/feedMWh:0,engEff:synMWh?elec/synMWh:0,overall:feedMWh?elec/feedMWh:0};
+  const feedMWh=briq*BAL.feedMJ/3.6,synMWh=T.gas*avgLhv/1000,toGenMWh=T.toGen*avgLhv/1000,elec=toGenMWh,sold=T.kwh/1000,own=avgOf(D.total,'ownKw')*D.total.h/1000;
+  return {waste,briq,gasT,ash,prep,air,feedMWh,synMWh,toGenMWh,elec,sold,own,exp:elec,cge:feedMWh?synMWh/feedMWh:0,engEff:synMWh?elec/synMWh:0,overall:feedMWh?elec/feedMWh:0};
 }
 function renderBalance(){
   const host=$('#pg_balance');
   if(onceEl('pg_balance',`<p class="lead">Where the waste and its energy go. Widths are to scale for the selected period. Hover a band for its value.</p>
+    <div class="warn" id="balWarn" hidden></div>
     <div class="kpis" id="balK"></div>
     <div class="card mt sankey"><h3>Mass balance <span>tonnes</span></h3><div id="skM"></div></div>
     <div class="card mt sankey"><h3>Energy balance <span>MWh</span></h3><div id="skE"></div></div>
@@ -314,9 +315,10 @@ function renderBalance(){
       <label class="field">Syngas density (kg/Nm³)<input type="number" step="0.01" min="0.5" max="1.5" data-b="gasDens"></label>
 </div>
       <div class="note">Gasification air is calculated as the mass that closes the balance (syngas plus ash minus briquets). Losses in the energy balance are the difference between each stage, so they include heat to the scrubber, cooling water, exhaust and radiation.</div></div>`)){
-    host.querySelectorAll('input[data-b]').forEach(i=>{i.value=BAL[i.dataset.b];i.addEventListener('change',()=>{const v=parseFloat(i.value);if(v>=0){BAL[i.dataset.b]=v;lsSet('wtg_bal',BAL);if(i.dataset.b==='own'&&typeof FIN!=='undefined'){FIN.own=v;lsSet('wtg_fin',FIN);}renderBalance();}});});}
+    host.querySelectorAll('input[data-b]').forEach(i=>{i.value=BAL[i.dataset.b];i.addEventListener('change',()=>{const v=parseFloat(i.value);if(v>=0){BAL[i.dataset.b]=v;lsSet('wtg_bal2',BAL);if(i.dataset.b==='own'&&typeof FIN!=='undefined'){FIN.own=v;lsSet('wtg_fin',FIN);}renderBalance();}});});}
   const b=balanceData(),W=Math.max(640,$('#skM').clientWidth||900);
-  renderKpis($('#balK'),[{l:'Cold gas efficiency',u:'%',v:b.cge*100,d:1,s:'syngas energy over briquet energy',c:'var(--gas)'},{l:'Gas delivered',u:'%',v:b.engEff*100,d:1,s:'of the syngas energy reaches the factory',c:'var(--gas)'},{l:'Heat per tonne of waste',u:'MWh/t',v:b.waste?b.elec/b.waste:0,d:2,s:'delivered to the furnace',c:'var(--power)'},{l:'Electricity bought',u:'MWh',v:b.own,d:1,s:fmt(b.waste?b.own*1000/b.waste:0)+' kWh per t of waste'}]);
+  renderKpis($('#balK'),[{l:'Cold gas efficiency',u:'%',v:b.cge*100,d:1,s:'syngas energy over briquet energy',c:'var(--gas)'},{l:'Heat in the gas delivered',u:'MMBtu/t',v:b.waste?b.elec*1000/KWH_PER_MMBTU/b.waste:0,d:1,s:'per t of waste, from the measured heating value',c:'var(--gas)'},{l:'Energy sold',u:'MMBtu/t',v:b.waste?b.sold*1000/KWH_PER_MMBTU/b.waste:0,d:1,s:'per t of waste, on the '+fmt(SALE_MMBTU)+' MMBtu per 1,000 Nm³ basis',c:(b.sold>b.elec*1.05?'var(--amber)':'var(--power)')},{l:'Electricity bought',u:'MWh',v:b.own,d:1,s:fmt(b.waste?b.own*1000/b.waste:0)+' kWh per t of waste'}]);
+  $('#balWarn').hidden=!(b.sold>b.elec*1.05);$('#balWarn').textContent='Check the sales basis: '+fmt(SALE_MMBTU)+' MMBtu per 1,000 Nm³ is '+fmt(b.elec?b.sold/b.elec:0,1)+' times the heat the gas actually carries at its measured heating value ('+fmt(avgOf(D.total,'lhv'),1)+' MJ/Nm³, about '+fmt(avgOf(D.total,'lhv')/1.055056,1)+' MMBtu per 1,000 Nm³), and more than the energy in the briquets. Revenue and credits in this dashboard follow the sales basis.';
   if(!b.waste&&!b.briq){$('#skM').innerHTML=$('#skE').innerHTML='<div class="empty">No production in this period.</div>';return;}
   $('#skM').innerHTML=sankey([
     {id:'w',label:'Waste delivered',col:0,c:'#c4ad86'},{id:'a',label:'Gasification air',col:0,c:'#6f7d8a'},
@@ -326,7 +328,7 @@ function renderBalance(){
   $('#skE').innerHTML=sankey([
     {id:'f',label:'Briquet energy',col:0,c:'#c4ad86'},
     {id:'y',label:'Syngas energy',col:1,c:'#8ccbe0'},{id:'lg',label:'Gasifier losses',col:1,c:'#5d6a77'},
-    {id:'e',label:'Heat delivered to the glass furnace',col:2,c:'#ff8f45'},{id:'lc',label:'Gas cleaning and line losses',col:2,c:'#4a5968'}],
+    {id:'e',label:'Heat to the glass furnace',col:2,c:'#ff8f45'},{id:'lc',label:'Gas cleaning and line losses',col:2,c:'#4a5968'}],
     [{s:'f',t:'y',v:Math.min(b.feedMWh,b.synMWh)},{s:'f',t:'lg',v:Math.max(0,b.feedMWh-b.synMWh)},{s:'y',t:'e',v:b.elec},{s:'y',t:'lc',v:Math.max(0,b.synMWh-b.elec)}],W,340,'MWh',1);
 }
 PAGES.balance={title:'Mass and energy',period:true,render:renderBalance,csv:()=>{const b=balanceData();const rows=metaRows([['Report','Mass and energy balance'],['Period',D.P.label+' ('+D.P.range+')'],['Briquet heating value MJ/kg',BAL.feedMJ],['Syngas density kg/Nm3',BAL.gasDens]]);rows.push(['Item','Value','Unit']);[['Waste delivered',b.waste,'t'],['Briquets',b.briq,'t'],['Moisture and rejects',b.prep,'t'],['Gasification air (closing term)',b.air,'t'],['Syngas',b.gasT,'t'],['Ash',b.ash,'t'],['Briquet energy',b.feedMWh,'MWh'],['Syngas energy',b.synMWh,'MWh'],['Heat delivered to the glass furnace',b.elec,'MWh'],['Electricity bought',b.own,'MWh'],['Cold gas efficiency',b.cge*100,'%'],['Share of syngas energy delivered',b.engEff*100,'%']].forEach(r=>rows.push([r[0],r1(r[1],2),r[2]]));return {name:'mass-energy-balance_'+fileTag()+'_'+slug(D.P.label)+'.csv',text:csvText(rows)};}};

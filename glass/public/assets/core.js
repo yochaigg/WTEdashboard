@@ -171,7 +171,7 @@ function renderMain(){
     ['Briquets to reactor','kg',T.briq,0,rw+' '+fmt(cur.briqRate)+' kg/h',1],
     ['Syngas out of reactor','Nm³',T.gas,0,rw+' '+fmt(cur.gasRate)+' Nm³/h',1],
     ['Gas to the factory','Nm³',T.toGen,0,rw+' '+fmt(cur.genRate)+' Nm³/h',1],
-    ['Heat delivered','MWh',T.kwh/1000,1,rw+' '+fmt(cur.kw/1000,1)+' MW thermal',1],
+    ['Energy delivered','MMBtu',T.kwh/KWH_PER_MMBTU,0,rw+' '+fmt(cur.kw/KWH_PER_MMBTU,1)+' MMBtu/h',1],
     ['Natural gas replaced','Nm³',T.kwh/NG_KWH,0,'at '+fmt(NG_KWH,1)+' kWh per Nm³',1],
     ['Ash produced','kg',T.ash,0,fmt(T.briq?T.ash/T.briq*100:0,1)+' % of feed',1],
     ['CO₂ at the furnace','kg',T.co2,0,rw+' '+fmt(cur.co2Rate)+' kg/h, mostly biogenic',1],
@@ -185,7 +185,7 @@ function renderMain(){
     ['scrubber','Scrubber',fmt(cur.scrubber)+' °C',''],
     ['corona','Corona',fmt(cur.corona)+' °C',fmt(cur.kv,1)+' kV'],
     ['cooling','Cooling',fmt(cur.cooling)+' °C',''],
-    ['gen','Glass factory',fmt(cur.kw/1000,1)+' MW',fmtB(total.s.kwh/1000)+' MWh']
+    ['gen','Glass factory',fmt(cur.kw/KWH_PER_MMBTU,1)+' MMBtu/h','']
   ]);
 
   const {labels,sv}=labelsAndSeries();
@@ -200,7 +200,7 @@ function renderMain(){
   C('c_power',{series:[{name:'Heat delivered',color:'#ff8f45',type:'line',data:sv('kw'),dec:0}],limits:[{v:RATED_KW,color:'#7f93a8',label:'contract capacity '+fmt(RATED_KW)}]});
   C('c_anal',{series:[{name:'CO',color:'#f97316',type:'line',data:sv('CO'),dec:1},{name:'H₂',color:'#5aa9ff',type:'line',data:sv('H2'),dec:1},{name:'CH₄',color:'#4ade80',type:'line',data:sv('CH4'),dec:2},{name:'CO₂',color:'#a78bfa',type:'line',data:sv('CO2'),dec:1}]});
   C('c_o2',{series:[{name:'O₂',color:'#ef5b5b',type:'line',data:sv('O2'),dec:2}],limits:[{v:1.0,color:'#f5b942',label:'warning 1.0'},{v:1.5,color:'#ef5b5b',label:'critical 1.5'}]});
-  C('c_emis',{series:[{name:'Heating value',color:'#8ccbe0',type:'line',data:sv('lhv'),dec:2}],limits:[{v:7.5,color:'#f5b942',label:'low warning 7.5'}]});
+  C('c_emis',{series:[{name:'Heating value',color:'#8ccbe0',type:'line',data:sv('lhv'),dec:2}],limits:[{v:12.6,color:'#f5b942',label:'low warning 12.6'}]});
   C('c_feed',{series:[{name:'Briquets',color:'#f5b942',type:'line',data:sv('briqRate'),dec:0},{name:'Ash',color:'#7f93a8',type:'line',data:sv('ashRate'),dec:0}]});
   $('#c_waste').parentElement.querySelector('h3 span').textContent='t '+UNIT_PER[state.mode];
   drawChart($('#c_waste'),{labels:bk.map(b=>b.label),series:[{name:'Waste in (t)',color:'#2dd4bf',type:'bar',data:bk.map(b=>b.acc?b.acc.s.waste:null),dec:1}]});
@@ -216,11 +216,11 @@ function renderMain(){
   const chip=(v,warn,crit)=>`<span class="pill ${v>crit?'crit':v>warn?'warn':'ok'}">${v>crit?'high':v>warn?'watch':'ok'}</span>`;
   $('#analyzer').innerHTML='<table>'+[['CO','%',cur.CO,1],['H₂','%',cur.H2,1],['CH₄','%',cur.CH4,2],['CO₂','%',cur.CO2,1],['O₂','%',cur.O2,2],['N₂ (balance)','%',cur.N2,1],['Heating value','MJ/Nm³',cur.lhv,2],['Heating value','kWh/Nm³',cur.lhvKwh,2],['Tar after corona','mg/Nm³',cur.tar,0]].map(r=>`<tr><td>${r[0]}</td><td class="r">${fmt(r[2],r[3])} ${r[1]}</td><td class="r">${r[0]==='O₂'?chip(r[2],1.0,1.5):r[0].startsWith('Tar')?chip(r[2],50,80):''}</td></tr>`).join('')+'</table>';
   const lo=(v,w,c)=>`<span class="pill ${v<c?'crit':v<w?'warn':'ok'}">${v<c?'low':v<w?'watch':'ok'}</span>`;
-  $('#emis').innerHTML='<table>'+[['Heating value',fmt(cur.lhv,2)+' MJ/Nm³',lo(cur.lhv,7.5,7.0)],['Heating value',fmt(cur.lhvKwh,2)+' kWh/Nm³',''],['Hydrogen',fmt(cur.H2,1)+' %',''],['Tar',fmt(cur.tar)+' mg/Nm³',chip(cur.tar,50,80)],['Oxygen',fmt(cur.O2,2)+' %',chip(cur.O2,1.0,1.5)],['Gas temperature',fmt(cur.cooling)+' °C','']].map(r=>`<tr><td>${r[0]}</td><td class="r">${r[1]}</td><td class="r">${r[2]}</td></tr>`).join('')+'</table><div class="note">Measured where the gas leaves the plant for the glass factory.</div>';
+  $('#emis').innerHTML='<table>'+[['Heating value',fmt(cur.lhv,2)+' MJ/Nm³',lo(cur.lhv,12.6,12.0)],['Heating value',fmt(cur.lhvKwh,2)+' kWh/Nm³',''],['Hydrogen',fmt(cur.H2,1)+' %',''],['Tar',fmt(cur.tar)+' mg/Nm³',chip(cur.tar,50,80)],['Oxygen',fmt(cur.O2,2)+' %',chip(cur.O2,1.0,1.5)],['Gas temperature',fmt(cur.cooling)+' °C','']].map(r=>`<tr><td>${r[0]}</td><td class="r">${r[1]}</td><td class="r">${r[2]}</td></tr>`).join('')+'</table><div class="note">Measured where the gas leaves the plant for the glass factory.</div>';
   const sy=total.s.briq?total.s.gas/total.s.briq:0,kpt=total.s.briq?total.s.kwh/(total.s.briq/1000):0,own=avgOf(total,'ownKw')*total.h;
-  $('#eff').innerHTML='<table>'+[['Syngas yield',fmt(sy,2)+' Nm³/kg briquet'],['Heat delivered',fmt(kpt/1000,2)+' MWh/t briquet'],['Electricity bought',fmt(total.s.waste?own/total.s.waste:0)+' kWh/t waste'],['Use of contract capacity',fmt(avgOf(total,'kw')/RATED_KW*100,0)+' %']].map(r=>`<tr><td>${r[0]}</td><td class="r">${r[1]}</td></tr>`).join('')+'</table>';
+  $('#eff').innerHTML='<table>'+[['Syngas yield',fmt(sy,2)+' Nm³/kg briquet'],['Energy delivered',fmt(total.s.waste?total.s.kwh/KWH_PER_MMBTU/total.s.waste:0,1)+' MMBtu/t waste'],['Electricity bought',fmt(total.s.waste?own/total.s.waste:0)+' kWh/t waste'],['Use of contract capacity',fmt(avgOf(total,'kw')/RATED_KW*100,0)+' %']].map(r=>`<tr><td>${r[0]}</td><td class="r">${r[1]}</td></tr>`).join('')+'</table>';
   $('#genLbl').textContent='('+rw+')';
-  $('#gens').innerHTML='<table>'+[['Gas flow to the factory',fmt(cur.genRate)+' Nm³/h'],['Heat delivered',fmt(cur.kw/1000,2)+' MW'],['Contract capacity',fmt(RATED_KW/1000,1)+' MW'],['Use of capacity',fmt(cur.kw/RATED_KW*100)+' %'],['Natural gas replaced',fmt(cur.kw/NG_KWH)+' Nm³/h'],['Booster blowers',ENGINES+' running']].map(r=>`<tr><td>${r[0]}</td><td class="r">${r[1]}</td></tr>`).join('')+'</table><div class="note">The furnace keeps natural gas burners ready: they take over on planned shutdown days and during any gas delivery drop.</div>';
+  $('#gens').innerHTML='<table>'+[['Gas flow to the factory',fmt(cur.genRate)+' Nm³/h'],['Energy delivered',fmt(cur.kw/KWH_PER_MMBTU,1)+' MMBtu/h'],['Contract capacity',fmt(RATED_KW/KWH_PER_MMBTU,0)+' MMBtu/h'],['Use of capacity',fmt(cur.kw/RATED_KW*100)+' %'],['Natural gas replaced',fmt(cur.kw/NG_KWH)+' Nm³/h'],['Booster blowers',ENGINES+' running']].map(r=>`<tr><td>${r[0]}</td><td class="r">${r[1]}</td></tr>`).join('')+'</table><div class="note">The furnace keeps natural gas burners ready: they take over on planned shutdown days and during any gas delivery drop.</div>';
   $('#health').innerHTML='<table>'+[['Reactor pressure',fmt(cur.press,1)+' mbar'],['Scrubber water pH',fmt(cur.ph,2)],['Scrubber water level',fmt(cur.level)+' %'],['Corona voltage',fmt(cur.kv,1)+' kV']].map(r=>`<tr><td>${r[0]}</td><td class="r">${r[1]}</td></tr>`).join('')+'</table>';
   renderDrops(drops,P);
   const tk=[...trucksBetween(P.t1-2*DAY,P.t1)].filter(k=>k.t<=P.now).sort((a,b)=>b.t-a.t).slice(0,8);TKLIST=tk;

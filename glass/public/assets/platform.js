@@ -131,7 +131,7 @@ function renderSites(){
   const host=$('#pg_sites'),ed=can('sites');
   const tpdOf=s=>s.self?TPD:s.tpd;
   const op=SITES.filter(s=>s.stage==='Operating'),totT=SITES.reduce((a,s)=>a+tpdOf(s),0),opT=op.reduce((a,s)=>a+tpdOf(s),0);
-  const mwOf=t=>t/200*32.3;   /* MW of heat delivered at full output */
+  const mwOf=t=>t/24*1000*saleKwhPerNm3()/1000;   /* MW on the gas sales basis at full output */
   const stats=op.map(s=>{const d=siteDays(s,14),y=d.reduce((a,x)=>a+x.cr,0)/14*360;return {s,d,y};});
   const crY=stats.reduce((a,x)=>a+x.y,0);
   const stages=['Operating','Construction','Development'],scol={Operating:'var(--green)',Construction:'var(--amber)',Development:'var(--muted)'};

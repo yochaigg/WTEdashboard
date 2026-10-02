@@ -8,7 +8,12 @@ const S=()=>TPD/30;                 /* scale vs the 30 t/day base model */
 /* GAS VERSION: cleaned syngas is piped to a glass factory and burned in its furnace instead of natural gas.
    p.kw is the heat delivered to the factory in kW (thermal), p.ownKw the electricity the plant buys for itself. */
 let RATED_KW=38000;                 /* delivery capacity in the gas supply contract, kW thermal */
-function contractKw(){return Math.ceil(1100*S()*2*0.97*2.268*1.15/1000)*1000;}
+/* gas basis from the plant owner: 1 t of waste gives 1,000 Nm3 of syngas, and 1,000 Nm3 is sold as SALE_MMBTU MMBtu */
+let SALE_MMBTU=40;
+const KWH_PER_MMBTU=293.071;
+const LHV_REF=13.40;                /* MJ/Nm3 for the design gas: CO 35, H2 50, CH4 10, N2 5 (mol %) */
+const saleKwhPerNm3=()=>SALE_MMBTU*KWH_PER_MMBTU/1000;
+function contractKw(){return Math.ceil(TPD/24*1000*saleKwhPerNm3()*1.15/1000)*1000;}
 const ENG_KW=0;let ENGINES=2;       /* two gas booster blowers push the syngas to the factory */
 function enginesNeeded(){return 2;}
 const NG_KWH=10.0;                  /* heating value of natural gas, kWh per Nm3 (LHV), used for natural gas equivalents */
@@ -72,24 +77,24 @@ function plant(t){
   const d0=ty===0?d:0,d1=ty===1?d:0,d2=ty===2?d:0,d3=ty===3?d:0;
   const p={t};
   p.briqRate=1100*S()*f*(1+0.04*noise(m,1))*(1-0.35*d0);
-  const yieldNm3=2.0*(1+0.05*noise(m,2));
+  const yieldNm3=1000/(0.88*0.97*1000)*(1+0.05*noise(m,2));   /* 1,000 Nm3 delivered per t of waste */
   p.gasRate=p.briqRate*yieldNm3*(1-0.25*d0);
   p.genRate=p.gasRate*0.97;
   p.reactor=950+16*noise(m,3)-110*d0;
   p.scrubber=160+7*noise(m,4)+45*d3;
   p.corona=95+5*noise(m,5)+8*d3;
   p.cooling=35+3*noise(m,6)+3*d3;
-  p.CO=22+1.5*noise(m,7)-3*d0;
-  p.H2=40+1.5*noise(m,8)-4*d0;
-  p.CH4=3+0.4*noise(m,9);
-  p.CO2=14+0.8*noise(m,10)+2*d0;
+  p.CO=35+1.5*noise(m,7)-3*d0;
+  p.H2=50+1.5*noise(m,8)-4*d0;
+  p.CH4=10+0.4*noise(m,9);
+  p.CO2=0.3+0.2*noise(m,10)+2*d0;
   p.O2=0.4+0.1*noise(m,11)+1.6*d1;
   p.N2=100-p.CO-p.H2-p.CH4-p.CO2-p.O2;
   p.tar=18+4*noise(m,18)+40*d3;
   p.lhv=(p.CO*12.63+p.H2*10.78+p.CH4*35.8)/100;   /* MJ/Nm3 */
   p.lhvKwh=p.lhv/3.6;
   p.eff=1;
-  p.kw=Math.min(RATED_KW,p.genRate*p.lhvKwh);      /* heat delivered to the furnace, kW thermal */
+  p.kw=Math.min(RATED_KW,p.genRate*saleKwhPerNm3()*p.lhv/LHV_REF);   /* energy delivered on the sales basis, kW; follows gas quality */
   p.ownKw=165*S()*(1+0.03*noise(m,23));             /* electricity bought for shredder, press, blowers and pumps */
   p.emCO=220+30*noise(m,13)+320*d2;
   p.emNOx=170+20*noise(m,14)+60*d2;
@@ -145,8 +150,8 @@ const RULES=[
  {id:'o2High',name:'Syngas O2 high (air ingress)',unit:'%',dec:2,get:p=>p.O2,dir:'max',warn:1.0,crit:1.5,node:'reactor'},
  {id:'scrHigh',name:'Scrubber temperature high',unit:'°C',dec:0,get:p=>p.scrubber,dir:'max',warn:180,crit:200,node:'scrubber'},
  {id:'tarHigh',name:'Tar after corona high',unit:'mg/Nm³',dec:0,get:p=>p.tar,dir:'max',warn:50,crit:80,node:'corona'},
- {id:'genGas',name:'Gas flow to the factory low',unit:'Nm³/h',dec:0,get:p=>p.genRate,dir:'min',warn:10000,crit:null,node:'gen',perTpd:true},
- {id:'lhvLow',name:'Gas heating value low',unit:'MJ/Nm³',dec:2,get:p=>p.lhv,dir:'min',warn:7.5,crit:7.0,node:'gen'}
+ {id:'genGas',name:'Gas flow to the factory low',unit:'Nm³/h',dec:0,get:p=>p.genRate,dir:'min',warn:6000,crit:null,node:'gen',perTpd:true},
+ {id:'lhvLow',name:'Gas heating value low',unit:'MJ/Nm³',dec:2,get:p=>p.lhv,dir:'min',warn:12.6,crit:12.0,node:'gen'}
 ];
 /* thresholds are editable on the Alarm rules page; perTpd limits are quoted at 200 t/day and scale with throughput */
 function ruleLim(r,k){const v=r[k];return v==null?null:(r.perTpd?v*TPD/200:v);}
