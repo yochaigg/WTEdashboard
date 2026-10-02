@@ -56,7 +56,10 @@ function renderFinance(){
   }
   const {P,bk}=D,f=finData(),t=f.tot,hrs=D.total.h||1;
   renderKpis($('#finK'),[
-    {l:'Revenue',u:'EUR',v:t.R,d:0,s:'syngas, gate fees, credits'},
+    {l:'Syngas sales',u:'EUR',v:t.rev.gas,d:0,s:fmt(t.mm)+' MMBtu × €'+fmt(gasPrice(),2),c:'var(--gas)'},
+    {l:'Gate fees',u:'EUR',v:t.rev.gate,d:0,s:fmt(D.total.s.waste,1)+' t × €'+fmt(FIN.gate),c:'var(--waste)'},
+    {l:'Carbon credits',u:'EUR',v:t.rev.carbon,d:0,s:fmt(credits(D.total).net,1)+' tCO2e × €'+fmt(cfg.price),c:'var(--carbon)'},
+    {l:'Total revenue',u:'EUR',v:t.R,d:0,s:'syngas, gate fees and credits',c:'var(--money)'},
     {l:'Operating costs',u:'EUR',v:t.C,d:0,s:fmt(FIN.opexPct,1)+' % of €'+fmt(FIN.capex)+' M a year, plus electricity'},
     {l:'EBITDA',u:'EUR',v:t.E,d:0,s:'margin '+fmt(t.R?t.E/t.R*100:0,1)+' %',c:t.E>=0?'var(--money)':'var(--red)'},
     {l:'Factory saving',u:'EUR',v:t.save,d:0,s:fmt(FIN.disc)+' % below its natural gas bill'},
