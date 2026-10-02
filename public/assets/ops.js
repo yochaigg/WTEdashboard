@@ -61,14 +61,14 @@ function renderSchematic(){
   const nomBriq=1100*S(),nomGas=nomBriq*2.0;
   const own=(typeof FIN!=='undefined'?FIN.own:8)/100;
   const sc=live&&D.todayS?D.todayS:total.s;setTxt('v_scale',fmt(sc.waste,1)+' t');setTxt('s_scale',fmt(sc.trucks)+' trucks, '+(live?'today':P.label.toLowerCase()));
-  setTxt('v_belt',fmt(cur.briqRate)+' kg/h');setTxt('s_belt',rw+' briquet feed');
+  setTxt('v_belt',fmt(cur.briqRate/1000,2)+' t/h');setTxt('s_belt',rw+' briquet feed');
   setTxt('v_reactor',fmt(cur.reactor)+' °C');setTxt('s_reactor',fmt(cur.gasRate)+' Nm³/h syngas out');
   setTxt('v_ash',fmt(cur.ashRate)+' kg/h');setTxt('s_ash','');
   setTxt('v_scrubber',fmt(cur.scrubber)+' °C');setTxt('s_scrubber','pH '+fmt(cur.ph,1)+', level '+fmt(cur.level)+' %');
   setTxt('v_corona',fmt(cur.corona)+' °C');setTxt('s_corona',fmt(cur.kv,1)+' kV, tar '+fmt(cur.tar)+' mg/Nm³');
   setTxt('v_cooling',fmt(cur.cooling)+' °C');setTxt('s_cooling',fmt(cur.genRate)+' Nm³/h to engines');
-  setTxt('v_gen',fmt(cur.kw)+' kW');setTxt('s_gen',ENGINES+' × J620, '+fmt(cur.kw/RATED_KW*100)+' % load');
-  setTxt('v_grid',fmt(cur.kw*(1-own))+' kW');setTxt('s_grid','after '+fmt(own*100)+' % own use');
+  setTxt('v_gen',fmt(cur.kw/1000,2)+' MW');setTxt('s_gen',ENGINES+' × J620, '+fmt(cur.kw/RATED_KW*100)+' % load');
+  setTxt('v_grid',fmt(cur.kw*(1-own)/1000,2)+' MW');setTxt('s_grid','after '+fmt(own*100)+' % own use');
   setTxt('engMore',ENGINES>4?'+ '+(ENGINES-4)+' more engines':'');
   for(let i=0;i<4;i++){const f=document.getElementById('fan'+i);if(f){f.style.opacity=i<ENGINES?1:.2;f.classList.toggle('stop',!(cur.kw>1)||i>=ENGINES);}}
   const fc=document.getElementById('fanc');if(fc)fc.classList.toggle('stop',!(cur.genRate>1));
@@ -86,14 +86,14 @@ function renderSchematic(){
 }
 const UNIT_INFO={
   scale:{t:'Truck scale',rows:c=>[['Waste in',fmt(D.total.s.waste,1)+' t'],['Trucks',fmt(D.total.s.trucks)],['Average load',fmt(D.total.s.trucks?D.total.s.waste/D.total.s.trucks:0,2)+' t']],go:[['Suppliers','suppliers'],['Event log','events']]},
-  belt:{t:'Briquetting and belt',rows:c=>[['Briquet feed',fmt(c.briqRate)+' kg/h'],['Briquets in period',fmtB(D.total.s.briq)+' kg']],go:[['Mass and energy','balance']]},
+  belt:{t:'Briquetting and belt',rows:c=>[['Briquet feed',fmt(c.briqRate/1000,2)+' t/h'],['Briquets in period',fmt(D.total.s.briq/1000,1)+' t']],go:[['Mass and energy','balance']]},
   reactor:{t:'Reactor',rows:c=>[['Temperature',fmt(c.reactor)+' °C'],['Pressure',fmt(c.press,1)+' mbar'],['Syngas out',fmt(c.gasRate)+' Nm³/h'],['H₂ in syngas',fmt(c.H2,1)+' %'],['O₂ in syngas',fmt(c.O2,2)+' %']],ana:true,go:[['Alarm rules','alarms']]},
   ash:{t:'Ash',rows:c=>[['Ash rate',fmt(c.ashRate)+' kg/h'],['Ash in period',fmtB(D.total.s.ash)+' kg']],go:[['Mass and energy','balance']]},
   scrubber:{t:'Scrubber',rows:c=>[['Temperature',fmt(c.scrubber)+' °C'],['Water pH',fmt(c.ph,2)],['Water level',fmt(c.level)+' %']],ana:true,go:[['Maintenance','maint']]},
   corona:{t:'Corona filter',rows:c=>[['Temperature',fmt(c.corona)+' °C'],['Voltage',fmt(c.kv,1)+' kV'],['Tar after filter',fmt(c.tar)+' mg/Nm³']],ana:true,go:[['Maintenance','maint']]},
   cooling:{t:'Gas cooler',rows:c=>[['Gas temperature out',fmt(c.cooling)+' °C'],['Gas to engines',fmt(c.genRate)+' Nm³/h'],['Heating value',fmt(c.lhv,2)+' MJ/Nm³']]},
-  gen:{t:'Engines, INNIO Jenbacher J620',rows:c=>[['Output',fmt(c.kw)+' kW'],['Engines',ENGINES+' × '+fmt(ENG_KW)+' kW'],['Load',fmt(c.kw/RATED_KW*100)+' %'],['CO in exhaust',fmt(c.emCO)+' mg/Nm³'],['NOx in exhaust',fmt(c.emNOx)+' mg/Nm³']],ana:true,go:[['Maintenance','maint'],['Grid export','grid']]},
-  grid:{t:'To the grid',rows:c=>{const own=(typeof FIN!=='undefined'?FIN.own:8)/100;return [['Generated',fmt(c.kw)+' kW'],['Own use',fmt(c.kw*own)+' kW'],['Exported',fmt(c.kw*(1-own))+' kW']];},go:[['Grid export','grid'],['Finance','finance']]}
+  gen:{t:'Engines, INNIO Jenbacher J620',rows:c=>[['Output',fmt(c.kw/1000,2)+' MW'],['Engines',ENGINES+' × '+fmt(ENG_KW/1000,1)+' MW'],['Load',fmt(c.kw/RATED_KW*100)+' %'],['CO in exhaust',fmt(c.emCO)+' mg/Nm³'],['NOx in exhaust',fmt(c.emNOx)+' mg/Nm³']],ana:true,go:[['Maintenance','maint'],['Grid export','grid']]},
+  grid:{t:'To the grid',rows:c=>{const own=(typeof FIN!=='undefined'?FIN.own:8)/100;return [['Generated',fmt(c.kw/1000,2)+' MW'],['Own use',fmt(c.kw*own/1000,2)+' MW'],['Exported',fmt(c.kw*(1-own)/1000,2)+' MW']];},go:[['Grid export','grid'],['Finance','finance']]}
 };
 function fillPop(pop){const u=UNIT_INFO[pop.dataset.u];if(!u||!D)return;pop.querySelector('tbody').innerHTML=u.rows(D.cur).map(r=>`<tr><td>${r[0]}</td><td class="r num">${r[1]}</td></tr>`).join('');}
 function openPop(id,anchor){
@@ -213,12 +213,12 @@ function renderShifts(){
   </div>
   <pre id="shText" hidden>${esch(sumTxt)}</pre>`;
   host.innerHTML=html;
-  renderKpis($('#shK'),[{l:'Waste in',u:'t',v:m.a.s.waste,d:1,s:fmt(m.a.s.trucks)+' trucks'},{l:'Briquets to reactor',u:'kg',v:m.a.s.briq,d:0,s:''},{l:'Power generated',u:'kWh',v:m.a.s.kwh,d:0,s:'average '+fmt(m.run)+' kW'},{l:'Gas to generator',u:'Nm³',v:m.a.s.toGen,d:0,s:''},{l:'Ash produced',u:'kg',v:m.a.s.ash,d:0,s:''},{l:'Alerts',u:'',v:m.al.length,d:0,s:m.dr.length+' output drops'}]);
+  renderKpis($('#shK'),[{l:'Waste in',u:'t',v:m.a.s.waste,d:1,s:fmt(m.a.s.trucks)+' trucks'},{l:'Briquets to reactor',u:'t',v:m.a.s.briq/1000,d:1,s:''},{l:'Power generated',u:'MWh',v:m.a.s.kwh/1000,d:1,s:'average '+fmt(m.run/1000,2)+' MW'},{l:'Gas to generator',u:'Nm³',v:m.a.s.toGen,d:0,s:''},{l:'Ash produced',u:'kg',v:m.a.s.ash,d:0,s:''},{l:'Alerts',u:'',v:m.al.length,d:0,s:m.dr.length+' output drops'}]);
 }
 function shiftText(s,m,n){
   return ['Shift handover, '+s.name+' shift '+fd(s.t0)+' '+hhmm(s.t0)+' to '+hhmm(s.t1),
-    'Waste in: '+fmt(m.a.s.waste,1)+' t ('+m.a.s.trucks+' trucks)','Power generated: '+fmt(m.a.s.kwh)+' kWh, average '+fmt(m.run)+' kW',
-    'Briquets to reactor: '+fmt(m.a.s.briq)+' kg','Alerts: '+m.al.length+(m.al.length?' ('+[...new Set(m.al.map(a=>a.rule.name))].join(', ')+')':''),
+    'Waste in: '+fmt(m.a.s.waste,1)+' t ('+m.a.s.trucks+' trucks)','Power generated: '+fmt(m.a.s.kwh/1000,1)+' MWh, average '+fmt(m.run/1000,2)+' MW',
+    'Briquets to reactor: '+fmt(m.a.s.briq/1000,1)+' t','Alerts: '+m.al.length+(m.al.length?' ('+[...new Set(m.al.map(a=>a.rule.name))].join(', ')+')':''),
     'Output drops: '+m.dr.length,'','Notes:',(n.text||'(none)'),'',n.signed?'Signed by '+(n.by||'')+' at '+tsf(n.signed):'Not signed yet'].join('\n');
 }
 $('#pg_shifts').addEventListener('click',async e=>{

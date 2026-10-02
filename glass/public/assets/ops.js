@@ -61,7 +61,7 @@ function renderSchematic(){
   const {cur,total,P}=D,live=state.mode==='live',rw=live?'now':'avg';
   const nomBriq=1100*S(),nomGas=nomBriq*1.1715;
   const sc=live&&D.todayS?D.todayS:total.s;setTxt('v_scale',fmt(sc.waste,1)+' t');setTxt('s_scale',fmt(sc.trucks)+' trucks, '+(live?'today':P.label.toLowerCase()));
-  setTxt('v_belt',fmt(cur.briqRate)+' kg/h');setTxt('s_belt',rw+' briquet feed');
+  setTxt('v_belt',fmt(cur.briqRate/1000,2)+' t/h');setTxt('s_belt',rw+' briquet feed');
   setTxt('v_reactor',fmt(cur.reactor)+' °C');setTxt('s_reactor',fmt(cur.gasRate)+' Nm³/h syngas out');
   setTxt('v_ash',fmt(cur.ashRate)+' kg/h');setTxt('s_ash','');
   setTxt('v_scrubber',fmt(cur.scrubber)+' °C');setTxt('s_scrubber','pH '+fmt(cur.ph,1)+', level '+fmt(cur.level)+' %');
@@ -89,7 +89,7 @@ function renderSchematic(){
 }
 const UNIT_INFO={
   scale:{t:'Truck scale',rows:c=>[['Waste in',fmt(D.total.s.waste,1)+' t'],['Trucks',fmt(D.total.s.trucks)],['Average load',fmt(D.total.s.trucks?D.total.s.waste/D.total.s.trucks:0,2)+' t']],go:[['Suppliers','suppliers'],['Event log','events']]},
-  belt:{t:'Briquetting and belt',rows:c=>[['Briquet feed',fmt(c.briqRate)+' kg/h'],['Briquets in period',fmtB(D.total.s.briq)+' kg']],go:[['Mass and energy','balance']]},
+  belt:{t:'Briquetting and belt',rows:c=>[['Briquet feed',fmt(c.briqRate/1000,2)+' t/h'],['Briquets in period',fmt(D.total.s.briq/1000,1)+' t']],go:[['Mass and energy','balance']]},
   reactor:{t:'Reactor',rows:c=>[['Temperature',fmt(c.reactor)+' °C'],['Pressure',fmt(c.press,1)+' mbar'],['Syngas out',fmt(c.gasRate)+' Nm³/h'],['H₂ in syngas',fmt(c.H2,1)+' %'],['O₂ in syngas',fmt(c.O2,2)+' %']],ana:true,go:[['Alarm rules','alarms']]},
   ash:{t:'Ash',rows:c=>[['Ash rate',fmt(c.ashRate)+' kg/h'],['Ash in period',fmtB(D.total.s.ash)+' kg']],go:[['Mass and energy','balance']]},
   scrubber:{t:'Scrubber',rows:c=>[['Temperature',fmt(c.scrubber)+' °C'],['Water pH',fmt(c.ph,2)],['Water level',fmt(c.level)+' %']],ana:true,go:[['Maintenance','maint']]},
@@ -217,12 +217,12 @@ function renderShifts(){
   </div>
   <pre id="shText" hidden>${esch(sumTxt)}</pre>`;
   host.innerHTML=html;
-  renderKpis($('#shK'),[{l:'Waste in',u:'t',v:m.a.s.waste,d:1,s:fmt(m.a.s.trucks)+' trucks'},{l:'Briquets to reactor',u:'kg',v:m.a.s.briq,d:0,s:''},{l:'Heat delivered',u:'MWh',v:m.a.s.kwh/1000,d:1,s:'average '+fmt(m.run/1000,1)+' MW'},{l:'Gas to the factory',u:'Nm³',v:m.a.s.toGen,d:0,s:''},{l:'Ash produced',u:'kg',v:m.a.s.ash,d:0,s:''},{l:'Alerts',u:'',v:m.al.length,d:0,s:m.dr.length+' output drops'}]);
+  renderKpis($('#shK'),[{l:'Waste in',u:'t',v:m.a.s.waste,d:1,s:fmt(m.a.s.trucks)+' trucks'},{l:'Briquets to reactor',u:'t',v:m.a.s.briq/1000,d:1,s:''},{l:'Heat delivered',u:'MWh',v:m.a.s.kwh/1000,d:1,s:'average '+fmt(m.run/1000,1)+' MW'},{l:'Gas to the factory',u:'Nm³',v:m.a.s.toGen,d:0,s:''},{l:'Ash produced',u:'kg',v:m.a.s.ash,d:0,s:''},{l:'Alerts',u:'',v:m.al.length,d:0,s:m.dr.length+' output drops'}]);
 }
 function shiftText(s,m,n){
   return ['Shift handover, '+s.name+' shift '+fd(s.t0)+' '+hhmm(s.t0)+' to '+hhmm(s.t1),
     'Waste in: '+fmt(m.a.s.waste,1)+' t ('+m.a.s.trucks+' trucks)','Heat delivered to the factory: '+fmt(m.a.s.kwh/1000,1)+' MWh, average '+fmt(m.run/1000,1)+' MW',
-    'Briquets to reactor: '+fmt(m.a.s.briq)+' kg','Alerts: '+m.al.length+(m.al.length?' ('+[...new Set(m.al.map(a=>a.rule.name))].join(', ')+')':''),
+    'Briquets to reactor: '+fmt(m.a.s.briq/1000,1)+' t','Alerts: '+m.al.length+(m.al.length?' ('+[...new Set(m.al.map(a=>a.rule.name))].join(', ')+')':''),
     'Output drops: '+m.dr.length,'','Notes:',(n.text||'(none)'),'',n.signed?'Signed by '+(n.by||'')+' at '+tsf(n.signed):'Not signed yet'].join('\n');
 }
 $('#pg_shifts').addEventListener('click',async e=>{

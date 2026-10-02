@@ -172,7 +172,7 @@ const METRICS=[
   {k:'power',re:/heat|deliver|factory|furnace|glass|kw\b|kwh|mwh|energy|output|power|natural gas/,label:'heat delivered to the factory',rate:'kw',unit:'kW',tot:a=>a.s.kwh/1000,totU:'MWh',dec:0},
   {k:'waste',re:/waste|tons?\b|tonnes?|truck|deliver|scale/,label:'waste received',tot:a=>a.s.waste,totU:'t',dec:1,trucks:true},
   {k:'gas',re:/syngas|\bgas\b|gas flow/,label:'syngas',rate:'gasRate',unit:'Nm³/h',tot:a=>a.s.gas,totU:'Nm³',dec:0},
-  {k:'briq',re:/briquet|feed|conveyor|belt/,label:'briquet feed',rate:'briqRate',unit:'kg/h',tot:a=>a.s.briq,totU:'kg',dec:0},
+  {k:'briq',re:/briquet|feed|conveyor|belt/,label:'briquet feed',rate:'briqRate',unit:'kg/h',tot:a=>a.s.briq/1000,totU:'t',dec:1},
   {k:'reactor',re:/reactor|gasifier/,label:'reactor temperature',rate:'reactor',unit:'°C',dec:0},
   {k:'scrubber',re:/scrubber/,label:'scrubber temperature',rate:'scrubber',unit:'°C',dec:0},
   {k:'h2',re:/hydrogen|\bh2\b/,label:'hydrogen in syngas',rate:'H2',unit:'%',dec:1},
@@ -231,7 +231,7 @@ function answer(qRaw){
   if(!M&&!why&&!sup&&!statusQ){res.html='I did not catch a measurement or a time in that. Try one of the suggestions above, or name what you want and when, for example <b>heat delivered yesterday</b> or <b>alerts this week</b>.';return res;}
   if(!M&&!why&&!sup&&statusQ){
     const p=plant(now),act=alertCache.eps.filter(e=>e.end==null),nx=nextShutdown(now);
-    res.html=p.shutdown?'The plant is on a <b>planned shutdown</b> today and restarts at midnight.':`The plant is <b>running</b>: ${fmt(p.kw/1000,1)} MW of heat going to the glass factory as ${fmt(p.genRate)} Nm³/h of syngas, reactor at ${fmt(p.reactor)} °C, ${fmt(p.briqRate)} kg/h of briquets going in. `+(act.length?`<b>${act.length} active alert${act.length>1?'s':''}</b>: ${act.map(e=>e.rule.name).join(', ')}.`:'No active alerts.')+(nx?` Next planned shutdown in ${daysTo(nx.start)} days.`:'');
+    res.html=p.shutdown?'The plant is on a <b>planned shutdown</b> today and restarts at midnight.':`The plant is <b>running</b>: ${fmt(p.kw/1000,1)} MW of heat going to the glass factory as ${fmt(p.genRate)} Nm³/h of syngas, reactor at ${fmt(p.reactor)} °C, ${fmt(p.briqRate/1000,2)} t/h of briquets going in. `+(act.length?`<b>${act.length} active alert${act.length>1?'s':''}</b>: ${act.map(e=>e.rule.name).join(', ')}.`:'No active alerts.')+(nx?` Next planned shutdown in ${daysTo(nx.start)} days.`:'');
     res.acts.push(['Open plant',()=>gotoScreen('plant')]);return res;}
   if(!w)w=why?{t0:now-DAY,t1:now,label:'in the last 24 hours'}:{t0:dayStart(now),t1:now,label:'today'};
   if(w.t1<=w.t0){res.html='That time has not happened yet. Try "yesterday" or a date.';return res;}

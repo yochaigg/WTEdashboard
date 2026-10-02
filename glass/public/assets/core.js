@@ -149,7 +149,7 @@ function renderFlow(nodes){
 }
 
 /* ---------- plant screen ---------- */
-const MAIN_CARDS=[['c_reactor','Reactor temperature','°C'],['c_train','Scrubber, corona, cooling temperature','°C'],['c_gas','Gas flow: reactor out vs to the factory','Nm³/h'],['c_power','Heat delivered to the glass factory','kW thermal'],['c_anal','Gas analyzer','% vol'],['c_o2','Syngas oxygen','% vol'],['c_emis','Heating value of the gas delivered','MJ/Nm³'],['c_feed','Briquet feed and ash','kg/h'],['c_waste','Waste in at truck scale','t per bucket']];
+const MAIN_CARDS=[['c_reactor','Reactor temperature','°C'],['c_train','Scrubber, corona, cooling temperature','°C'],['c_gas','Gas flow: reactor out vs to the factory','Nm³/h'],['c_power','Heat delivered to the glass factory','kW thermal'],['c_anal','Gas analyzer','% vol'],['c_o2','Syngas oxygen','% vol'],['c_emis','Heating value of the gas delivered','MJ/Nm³'],['c_feed','Briquet feed and ash','t/h'],['c_waste','Waste in at truck scale','t per bucket']];
 function labelsAndSeries(){
   const live=state.mode==='live';
   return {labels:live?D.snaps.map(s=>hhmmss(s.t)):D.bk.map(b=>b.label),
@@ -168,7 +168,7 @@ function renderMain(){
   const K=[
     ['Waste in (truck scale)','t',T.waste,1,live?'today, last truck '+(lastTk?hhmm(lastTk.t):'-'):P.label],
     ['Trucks weighed','',nTr,0,(live?'today, ':'')+'avg '+fmt(nTr?T.waste/nTr:0,2)+' t per truck'],
-    ['Briquets to reactor','kg',T.briq,0,rw+' '+fmt(cur.briqRate)+' kg/h',1],
+    ['Briquets to reactor','t',T.briq/1000,1,rw+' '+fmt(cur.briqRate/1000,2)+' t/h',1],
     ['Syngas out of reactor','Nm³',T.gas,0,rw+' '+fmt(cur.gasRate)+' Nm³/h',1],
     ['Gas to the factory','Nm³',T.toGen,0,rw+' '+fmt(cur.genRate)+' Nm³/h',1],
     ['Energy delivered','MMBtu',T.kwh/KWH_PER_MMBTU,0,rw+' '+fmt(cur.kw/KWH_PER_MMBTU,1)+' MMBtu/h',1],
@@ -181,7 +181,7 @@ function renderMain(){
   renderKpis($('#kpis'),K.map(k=>({l:k[0]+(live&&k[5]?', today':''),u:k[1],v:k[2],d:k[3],s:k[4],nf:live&&k[5]})));
   renderSchematic([
     ['scale','Truck scale',fmt(total.s.waste,1)+' t',fmt(nTr)+' trucks'],
-    ['belt','Conveyor belt',fmtB(total.s.briq)+' kg',rw+' '+fmt(cur.briqRate)+' kg/h'],
+    ['belt','Conveyor belt',fmt(total.s.briq/1000,1)+' t',rw+' '+fmt(cur.briqRate/1000,2)+' t/h'],
     ['reactor','Reactor',fmt(cur.reactor)+' °C',fmt(cur.gasRate)+' Nm³/h out'],
     ['scrubber','Scrubber',fmt(cur.scrubber)+' °C',''],
     ['corona','Corona',fmt(cur.corona)+' °C',fmt(cur.kv,1)+' kV'],
@@ -202,7 +202,7 @@ function renderMain(){
   C('c_anal',{series:[{name:'CO',color:'#f97316',type:'line',data:sv('CO'),dec:1},{name:'H₂',color:'#5aa9ff',type:'line',data:sv('H2'),dec:1},{name:'CH₄',color:'#4ade80',type:'line',data:sv('CH4'),dec:2},{name:'CO₂',color:'#a78bfa',type:'line',data:sv('CO2'),dec:1}]});
   C('c_o2',{series:[{name:'O₂',color:'#ef5b5b',type:'line',data:sv('O2'),dec:2}],limits:[{v:1.0,color:'#f5b942',label:'warning 1.0'},{v:1.5,color:'#ef5b5b',label:'critical 1.5'}]});
   C('c_emis',{series:[{name:'Heating value',color:'#8ccbe0',type:'line',data:sv('lhv'),dec:2}],limits:[{v:12.6,color:'#f5b942',label:'low warning 12.6'}]});
-  C('c_feed',{series:[{name:'Briquets',color:'#f5b942',type:'line',data:sv('briqRate'),dec:0},{name:'Ash',color:'#7f93a8',type:'line',data:sv('ashRate'),dec:0}]});
+  C('c_feed',{series:[{name:'Briquets',color:'#f5b942',type:'line',data:sv('briqRate').map(v=>v==null?null:v/1000),dec:2},{name:'Ash',color:'#7f93a8',type:'line',data:sv('ashRate').map(v=>v==null?null:v/1000),dec:2}]});
   $('#c_waste').parentElement.querySelector('h3 span').textContent='t '+UNIT_PER[state.mode];
   drawChart($('#c_waste'),{labels:bk.map(b=>b.label),series:[{name:'Waste in (t)',color:'#2dd4bf',type:'bar',data:bk.map(b=>b.acc?b.acc.s.waste:null),dec:1}]});
 
@@ -219,7 +219,7 @@ function renderMain(){
   const lo=(v,w,c)=>`<span class="pill ${v<c?'crit':v<w?'warn':'ok'}">${v<c?'low':v<w?'watch':'ok'}</span>`;
   $('#emis').innerHTML='<table>'+[['Heating value',fmt(cur.lhv,2)+' MJ/Nm³',lo(cur.lhv,12.6,12.0)],['Heating value',fmt(cur.lhvKwh,2)+' kWh/Nm³',''],['Hydrogen',fmt(cur.H2,1)+' %',''],['Tar',fmt(cur.tar)+' mg/Nm³',chip(cur.tar,50,80)],['Oxygen',fmt(cur.O2,2)+' %',chip(cur.O2,1.0,1.5)],['Gas temperature',fmt(cur.cooling)+' °C','']].map(r=>`<tr><td>${r[0]}</td><td class="r">${r[1]}</td><td class="r">${r[2]}</td></tr>`).join('')+'</table><div class="note">Measured where the gas leaves the plant for the glass factory.</div>';
   const sy=total.s.briq?total.s.gas/total.s.briq:0,kpt=total.s.briq?total.s.kwh/(total.s.briq/1000):0,own=avgOf(total,'ownKw')*total.h;
-  $('#eff').innerHTML='<table>'+[['Syngas yield',fmt(sy,2)+' Nm³/kg briquet'],['Energy delivered',fmt(total.s.waste?total.s.kwh/KWH_PER_MMBTU/total.s.waste:0,1)+' MMBtu/t waste'],['Electricity bought',fmt(total.s.waste?own/total.s.waste:0)+' kWh/t waste'],['Use of contract capacity',fmt(avgOf(total,'kw')/RATED_KW*100,0)+' %']].map(r=>`<tr><td>${r[0]}</td><td class="r">${r[1]}</td></tr>`).join('')+'</table>';
+  $('#eff').innerHTML='<table>'+[['Syngas yield',fmt(sy*1000)+' Nm³/t briquet'],['Energy delivered',fmt(total.s.waste?total.s.kwh/KWH_PER_MMBTU/total.s.waste:0,1)+' MMBtu/t waste'],['Electricity bought',fmt(total.s.waste?own/total.s.waste:0)+' kWh/t waste'],['Use of contract capacity',fmt(avgOf(total,'kw')/RATED_KW*100,0)+' %']].map(r=>`<tr><td>${r[0]}</td><td class="r">${r[1]}</td></tr>`).join('')+'</table>';
   $('#genLbl').textContent='('+rw+')';
   $('#gens').innerHTML='<table>'+[['Gas flow to the factory',fmt(cur.genRate)+' Nm³/h'],['Energy delivered',fmt(cur.kw/KWH_PER_MMBTU,1)+' MMBtu/h'],['Contract capacity',fmt(RATED_KW/KWH_PER_MMBTU,0)+' MMBtu/h'],['Use of capacity',fmt(cur.kw/RATED_KW*100)+' %'],['Natural gas replaced',fmt(cur.kw/NG_KWH)+' Nm³/h'],['Booster blowers',ENGINES+' running']].map(r=>`<tr><td>${r[0]}</td><td class="r">${r[1]}</td></tr>`).join('')+'</table><div class="note">The furnace keeps natural gas burners ready: they take over on planned shutdown days and during any gas delivery drop.</div>';
   $('#health').innerHTML='<table>'+[['Reactor pressure',fmt(cur.press,1)+' mbar'],['Scrubber water pH',fmt(cur.ph,2)],['Scrubber water level',fmt(cur.level)+' %'],['Corona voltage',fmt(cur.kv,1)+' kV']].map(r=>`<tr><td>${r[0]}</td><td class="r">${r[1]}</td></tr>`).join('')+'</table>';

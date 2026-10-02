@@ -73,7 +73,7 @@ function renderFinance(){
   }
   const {P,bk}=D,f=finData(),t=f.tot,hrs=D.total.h||1;
   renderKpis($('#finK'),[
-    {l:'Electricity sales',u:'EUR',v:t.rev.power+t.rev.subsidy,d:0,s:fmt(t.exp*1000)+' kWh exported',c:'var(--power)'},
+    {l:'Electricity sales',u:'EUR',v:t.rev.power+t.rev.subsidy,d:0,s:fmt(t.exp,1)+' MWh × €'+fmt(FIN.peak),c:'var(--power)'},
     {l:'Gate fees',u:'EUR',v:t.rev.gate,d:0,s:fmt(D.total.s.waste,1)+' t × €'+fmt(FIN.gate),c:'var(--waste)'},
     {l:'Carbon credits',u:'EUR',v:t.rev.carbon,d:0,s:fmt(credits(D.total).net,1)+' tCO2e × €'+fmt(cfg.price),c:'var(--carbon)'},
     {l:'Total revenue',u:'EUR',v:t.R,d:0,s:'electricity, gate fees and credits',c:'var(--money)'},
@@ -91,7 +91,7 @@ function renderFinance(){
     {name:'EBITDA',color:'#d9c46a',type:'line',data:f.rows.map(m=>m&&m.E),dec:0}]});
   const L=(a,b,c,cls)=>`<tr${cls?` class="${cls}"`:''}><td>${a}</td><td class="r muted">${b}</td><td class="r num">${c}</td></tr>`;
   $('#finPL').innerHTML='<table>'+
-    L('Electricity',fmt(t.exp*1000)+' kWh exported'+(FIN.peak===FIN.off&&FIN.off===FIN.shoulder?' × €'+fmt(FIN.peak/1000,2):''),eur(t.rev.power))+(t.rev.subsidy?L('Electricity, subsidy',fmt(t.exp*1000)+' kWh × €'+fmt(FIN.subsidy,2),eur(t.rev.subsidy)):'')+L('Gate fees',fmt(D.total.s.waste,1)+' t × €'+fmt(FIN.gate),eur(t.rev.gate))+L('Carbon credits',fmt(credits(D.total).net,1)+' tCO2e × €'+fmt(cfg.price),eur(t.rev.carbon))+
+    L('Electricity',fmt(t.exp,1)+' MWh exported'+(FIN.peak===FIN.off&&FIN.off===FIN.shoulder?' × €'+fmt(FIN.peak):''),eur(t.rev.power))+(t.rev.subsidy?L('Electricity, subsidy',fmt(t.exp*1000)+' kWh × €'+fmt(FIN.subsidy,2),eur(t.rev.subsidy)):'')+L('Gate fees',fmt(D.total.s.waste,1)+' t × €'+fmt(FIN.gate),eur(t.rev.gate))+L('Carbon credits',fmt(credits(D.total).net,1)+' tCO2e × €'+fmt(cfg.price),eur(t.rev.carbon))+
     L('<b>Revenue</b>','','<b>'+eur(t.R)+'</b>')+
     L('<b>Operating costs</b>',fmt(FIN.opexPct,1)+' % × €'+fmt(FIN.capex)+' M a year, '+(hrs<48?fmt(hrs,1)+' h':fmt(hrs/24,1)+' days')+' of 365 days','<b>-'+eur(t.C)+'</b>')+L('<b>EBITDA</b>','','<b class="'+(t.E>=0?'pos':'neg')+'">'+eur(t.E)+'</b>')+'</table>';
 }
@@ -160,7 +160,7 @@ function renderGrid(){
     <div class="grid2 mt"><div class="card"><h3>Exported by tariff band <span id="grU"></span></h3><canvas id="c_gr" class="tall"></canvas><div class="legend"></div></div>
     <div class="card"><h3>Export through the day <span>average kW by hour, shaded by band</span></h3><canvas id="c_grh" class="tall"></canvas><div class="legend"></div></div></div>
     <div class="grid2 mt"><div class="card"><h3>Earnings by band <span id="grP"></span></h3><div id="grT"></div></div>
-    <div class="card"><h3>Tariff <span>EUR per MWh, saved in this browser</span></h3><div class="fgrid" id="grF"></div><div class="note">Electricity is sold at a fixed €0.20 per kWh (€200 per MWh), so all three bands are set to 200. If a time-of-day tariff applies later, set different prices here. Hours not in peak or off-peak count as shoulder.</div></div></div>`)){
+    <div class="card"><h3>Tariff <span>EUR per MWh, saved in this browser</span></h3><div class="fgrid" id="grF"></div><div class="note">Electricity is sold at a fixed €200 per MWh (€0.20 per kWh), so all three bands are set to 200. If a time-of-day tariff applies later, set different prices here. Hours not in peak or off-peak count as shoulder.</div></div></div>`)){
     attachTip($('#c_gr'));attachTip($('#c_grh'));
     const F=[['off','Off-peak price'],['shoulder','Shoulder price'],['peak','Peak price'],['peakFrom','Peak starts (hour)'],['peakTo','Peak ends (hour)'],['offFrom','Off-peak starts (hour)'],['offTo','Off-peak ends (hour)']];
     $('#grF').innerHTML=F.map(f=>`<label class="field">${f[1]}<input type="number" min="0" max="${/From|To/.test(f[0])?24:1000}" step="1" data-f="${f[0]}" value="${FIN[f[0]]}" ${can('edit')?'':'disabled'}></label>`).join('');
@@ -170,7 +170,7 @@ function renderGrid(){
   const per=bk.map((b,i)=>b.acc?bandsBetween(b.t,bucketEnd(b,i,bk,P)):null);
   const tot={off:0,shoulder:0,peak:0,gen:0};per.forEach(x=>{if(x){tot.off+=x.off;tot.shoulder+=x.shoulder;tot.peak+=x.peak;tot.gen+=x.gen;}});
   const exp=tot.off+tot.shoulder+tot.peak,eurT=bandEur(tot),hrs=D.total.h||1;
-  renderKpis($('#grK'),[{l:'Generated',u:'MWh',v:tot.gen,d:1,s:'average '+fmt(tot.gen/hrs,2)+' MW'},{l:'Own use',u:'MWh',v:tot.gen-exp,d:1,s:fmt(FIN.own,1)+' % of generation'},{l:'Exported to grid',u:'MWh',v:exp,d:1,s:'average '+fmt(exp/hrs,2)+' MW'},{l:'Export earnings',u:'EUR',v:eurT+exp*1000*FIN.subsidy,d:0,s:FIN.subsidy?eur(eurT)+' price plus '+eur(exp*1000*FIN.subsidy)+' subsidy':'at the price below'},{l:'Realised price',u:'EUR/kWh',v:exp?(eurT/exp+FIN.subsidy*1000)/1000:0,d:3,s:FIN.peak===FIN.off&&FIN.off===FIN.shoulder?'fixed price, same at every hour':'average over the bands'}]);
+  renderKpis($('#grK'),[{l:'Generated',u:'MWh',v:tot.gen,d:1,s:'average '+fmt(tot.gen/hrs,2)+' MW'},{l:'Own use',u:'MWh',v:tot.gen-exp,d:1,s:fmt(FIN.own,1)+' % of generation'},{l:'Exported to grid',u:'MWh',v:exp,d:1,s:'average '+fmt(exp/hrs,2)+' MW'},{l:'Export earnings',u:'EUR',v:eurT+exp*1000*FIN.subsidy,d:0,s:FIN.subsidy?eur(eurT)+' price plus '+eur(exp*1000*FIN.subsidy)+' subsidy':'at the price below'},{l:'Realised price',u:'EUR/MWh',v:exp?(eurT/exp+FIN.subsidy*1000):0,d:0,s:FIN.peak===FIN.off&&FIN.off===FIN.shoulder?'fixed price, same at every hour':'average over the bands'}]);
   $('#grU').textContent='MWh '+UNIT_PER[state.mode];$('#grP').textContent='('+P.label.toLowerCase()+')';
   drawChart($('#c_gr'),{labels:bk.map(b=>b.label),series:['off','shoulder','peak'].map(k=>({name:BAND_TXT[k],color:BAND_COL[k],type:'bar',data:per.map(x=>x&&x[k]),dec:2}))});
   const now=Date.now(),hk=[...Array(24)].map(()=>[0,0]);const span=Math.max(DAY,Math.min(P.now-P.t0,7*DAY));
