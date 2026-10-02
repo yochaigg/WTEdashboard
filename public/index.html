@@ -194,7 +194,7 @@ tr.dim td{color:var(--muted)}
     <button data-m="live">Live</button><button data-m="day">Day</button><button data-m="month">Month</button><button data-m="year">Year</button>
   </div>
   <div class="pnav" id="pnav"><span id="plabel"></span></div>
-  <div class="hr"><button class="btn" id="btnCsv" title="Download the data of the screen you are on as a CSV file">Export CSV</button><label class="tpd" title="Waste processed per day. Type a new value to update everything.">Waste throughput <input id="tpd" type="number" min="1" max="5000" step="10" value="200"> t/day</label><span class="badge live"><i></i>LIVE</span><span class="badge">v9</span><span class="badge ok" id="alertBadge">No active alerts</span><span id="clock"></span></div>
+  <div class="hr"><button class="btn" id="btnCsv" title="Download the data of the screen you are on as a CSV file">Export CSV</button><label class="tpd" title="Waste processed per day. Type a new value to update everything.">Waste throughput <input id="tpd" type="number" min="1" max="5000" step="10" value="200"> t/day</label><span class="badge live"><i></i>LIVE</span><span class="badge">v10</span><span class="badge ok" id="alertBadge">No active alerts</span><span id="clock"></span></div>
 </header>
 
 <div id="err" class="err" hidden></div>
@@ -320,14 +320,16 @@ function dayInfo(ms){
   const n=new Date(d);n.setDate(n.getDate()+1);
   return {start:d.getTime(),end:n.getTime(),ord:Math.round(d.getTime()/DAY)};
 }
-function dayFactor(ord){return 0.95+0.10*hash(ord*1.7+0.5);}
+const SHUT_EVERY=73,SHUT_OFF=17; /* 5 planned shutdown days per year, plant runs 360 days */
+const isShutdown=ord=>((ord+SHUT_OFF)%SHUT_EVERY+SHUT_EVERY)%SHUT_EVERY===0;
+function dayFactor(ord){return isShutdown(ord)?0:0.95+0.10*hash(ord*1.7+0.5);}
 
 const truckCache=new Map();
 function trucksOfDay(ms){
   const di=dayInfo(ms);
   if(truckCache.has(di.start))return truckCache.get(di.start);
   const o=di.ord,f=dayFactor(o);
-  const n=20+Math.floor(hash(o*1.1+0.3)*9);
+  const n=f===0?0:20+Math.floor(hash(o*1.1+0.3)*9);
   const raw=[],times=[];
   for(let i=0;i<n;i++){raw.push(0.7+0.6*hash(o*3.1+i));times.push(24*(i+0.5+0.5*(hash(o*5.3+i*1.37)-0.5))/n);}
   times.sort((a,b)=>a-b);
@@ -396,6 +398,10 @@ function plant(t){
   p.ph=7.2+0.2*noise(m,20);
   p.kv=42+1.5*noise(m,21)-3*d3;
   p.level=72+3*noise(m,22);
+  if(f===0){ /* planned shutdown day */
+    Object.assign(p,{shutdown:true,briqRate:0,gasRate:0,genRate:0,kw:0,co2Rate:0,ashRate:0,reactor:60+3*noise(m,3),scrubber:30+2*noise(m,4),corona:25+noise(m,5),cooling:22+noise(m,6),
+      CO:0,H2:0,CH4:0,CO2:0.04,O2:20.9,N2:79.06,tar:0,lhv:0,lhvKwh:0,eff:0,emCO:0,emNOx:0,emSO2:0,emPM:0,kv:0,press:0});
+  }
   return p;
 }
 
@@ -443,6 +449,7 @@ function scanAlerts(now,hours){
   const step=MIN,base=Math.floor(now/step)*step,eps=[],open={};
   for(let t=base-hours*HOUR;t<=base;t+=step){
     const p=plant(t);
+    if(p.shutdown){for(const id in open){open[id].end=t;delete open[id];}continue;}
     for(const r of RULES){
       const v=r.get(p),sev=r.test(v),o=open[r.id];
       if(sev){
@@ -466,6 +473,7 @@ function scanRange(s,e){
   for(let t=Math.ceil(s/step)*step;t<=e;t+=step){
     if(ALERT_FASTSCAN&&disturbance(t/MIN).d===0){for(const id in open){open[id].end=t;delete open[id];}continue;}
     const p=plant(t);
+    if(p.shutdown){for(const id in open){open[id].end=t;delete open[id];}continue;}
     for(const r of RULES){
       const v=r.get(p),sev=r.test(v),o=open[r.id];
       if(sev){
@@ -490,7 +498,7 @@ const dropCache=new Map();
 function detectDrops(t0,t1){
   const step=DROP_STEP,now=Date.now(),s=Math.floor((t0-3*HOUR)/step)*step,end=Math.min(t1+HOUR,now),n=Math.floor((end-s)/step)+1;
   if(n<50)return [];
-  const kw=new Float64Array(n);for(let i=0;i<n;i++)kw[i]=plant(s+i*step).kw;
+  const kw=new Float64Array(n),sd=new Int32Array(n+1);for(let i=0;i<n;i++){const q=plant(s+i*step);kw[i]=q.kw;sd[i+1]=sd[i]+(q.shutdown?1:0);}
   const ps=new Float64Array(n+1);for(let i=0;i<n;i++)ps[i+1]=ps[i]+kw[i];
   const L=36,G=6,out=[];let cur=null;
   const fin=c=>{
@@ -501,6 +509,7 @@ function detectDrops(t0,t1){
   };
   for(let i=L;i<n;i++){
     const a=i-L,b=i-G,base=(ps[b]-ps[a])/(b-a);
+    if(sd[i+1]-sd[a]>0){if(cur){fin(cur);cur=null;}continue;}
     if(kw[i]<(1-DROP_PCT)*base){
       if(!cur)cur={i0:i,i1:i,minI:i,min:kw[i],base};
       else{cur.i1=i;if(kw[i]<cur.min){cur.min=kw[i];cur.minI=i;}cur.base=Math.max(cur.base,base);}
@@ -526,6 +535,11 @@ function dropsBetween(t0,t1){
 function eventsBetween(t0,t1){
   const now=Date.now(),hi=Math.min(t1,now+1),ev=[];
   for(let d=dayInfo(t0).start;d<hi;d=dayInfo(d+30*HOUR).start){
+    const di=dayInfo(d);
+    if(isShutdown(di.ord)){
+      if(di.start>=t0&&di.start<hi)ev.push({id:'SHUT-'+di.ord+':on',t:di.start,type:'op',kind:'shutdown',sev:'warn',title:'Planned shutdown started',detail:'maintenance day, no feed, no power, no trucks'});
+      if(di.end>=t0&&di.end<hi)ev.push({id:'SHUT-'+di.ord+':off',t:di.end,type:'op',kind:'restart',sev:'ok',title:'Plant restarted after planned shutdown',detail:'back to normal operation'});
+    }
     trucksOfDay(d).forEach(k=>{
       const add=(t,kind,title,detail)=>{if(t>=t0&&t<hi)ev.push({id:k.id+':'+kind,t,type:'truck',kind,sev:'info',title,detail,truck:k});};
       add(k.t,'lpr','LPR read at gate: '+k.plate,'confidence '+k.conf.toFixed(1)+' %, ticket '+k.id+', '+k.supplier+', camera '+k.lprCam);
