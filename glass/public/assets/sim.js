@@ -8,8 +8,8 @@ const S=()=>TPD/30;                 /* scale vs the 30 t/day base model */
 /* GAS VERSION: cleaned syngas is piped to a glass factory and burned in its furnace instead of natural gas.
    p.kw is the heat delivered to the factory in kW (thermal), p.ownKw the electricity the plant buys for itself. */
 let RATED_KW=38000;                 /* delivery capacity in the gas supply contract, kW thermal */
-/* gas basis from the plant owner: 1 t of waste gives 1,000 Nm3 of syngas, and 1,000 Nm3 is sold as SALE_MMBTU MMBtu */
-let SALE_MMBTU=40;
+/* gas basis: 1 t of waste gives 1,000 Nm3 of syngas; 1,000 Nm3 at 13,400 kJ/Nm3 holds 12.7 MMBtu */
+let SALE_MMBTU=12.7;
 const KWH_PER_MMBTU=293.071;
 const LHV_REF=13.40;                /* MJ/Nm3 for the design gas: CO 35, H2 50, CH4 10, N2 5 (mol %) */
 const saleKwhPerNm3=()=>SALE_MMBTU*KWH_PER_MMBTU/1000;

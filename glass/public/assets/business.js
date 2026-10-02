@@ -1,20 +1,20 @@
 'use strict';
 /* ================= Business pages (gas version): finance, what-if, gas sales, impact =================
    The plant sells cleaned syngas to a glass factory, where it replaces natural gas in the furnace.
-   Basis from the plant owner: 1 t of waste gives 1,000 Nm3 of syngas, sold as 40 MMBtu per 1,000 Nm3,
+   Basis: 1 t of waste gives 1,000 Nm3 of syngas; at the design LHV of 13,400 kJ/Nm3 that is 12.7 MMBtu per 1,000 Nm3,
    priced per MMBtu at a discount to the natural gas price. */
 
 const FIN=Object.assign({
   ng:21.5,          /* natural gas price, EUR per MMBtu (EU gas 73.3 EUR/MWh on 2 Oct 2026 = 21.5 EUR/MMBtu) */
-  mmbtu:40,         /* MMBtu sold per 1,000 Nm3 of syngas */
+  mmbtu:12.7,       /* MMBtu per 1,000 Nm3 of syngas: 13,400 kJ/Nm3 x 1,000 / 1,055,056 kJ per MMBtu */
   disc:25,          /* syngas discount against natural gas, % */
   gate:45,          /* gate fee, EUR per tonne of waste received */
   elec:0.15,        /* electricity the plant buys, EUR per kWh */
   capex:75,         /* project cost, EUR million */
   opexPct:7,        /* operating cost per year, % of project cost */
   own:0             /* kept for shared code: no electricity is generated in this version */
-},lsGet('wtg_fin2',{}));
-const saveFin=()=>{lsSet('wtg_fin2',FIN);};
+},lsGet('wtg_fin3',{}));
+const saveFin=()=>{lsSet('wtg_fin3',FIN);};
 SALE_MMBTU=FIN.mmbtu;
 const mmbtuOf=kwh=>kwh/KWH_PER_MMBTU;
 const opexYear=()=>FIN.capex*1e6*FIN.opexPct/100;
@@ -86,7 +86,7 @@ PAGES.finance={title:'Finance',period:true,render:renderFinance,csv:()=>{const f
    What-if simulator
    ===================================================================== */
 function wiBase(){return {tpd:TPD,days:360,h2:50,ng:FIN.ng,disc:FIN.disc,gate:FIN.gate,cprice:cfg.price,capex:FIN.capex,opex:FIN.opexPct};}
-let WI=Object.assign(wiBase(),lsGet('wtg_wi2',{}));
+let WI=Object.assign(wiBase(),lsGet('wtg_wi3',{}));
 const WI_SL=[
   ['tpd','Waste throughput','t/day',50,600,10,0],['days','Operating days','days per year',300,365,1,0],['h2','Hydrogen in syngas','%',35,60,0.5,1],
   ['ng','Natural gas price','EUR per MMBtu',3,50,0.5,1],['disc','Syngas discount to natural gas','%',0,60,1,0],['gate','Gate fee','EUR per t',0,150,1,0],['cprice','Carbon credit price','EUR per tCO2e',0,150,1,0],
@@ -113,10 +113,10 @@ function renderWhatif(){
     <div class="card"><h3>Cumulative cash over 15 years <span>EUR million, before financing and tax</span></h3><canvas id="c_wi"></canvas><div class="legend"></div></div></div></div>
     <div class="card mt"><h3>Saved scenarios</h3><div class="scrollx" id="wiList"></div></div>`)){
     $('#wiS').innerHTML=WI_SL.map(s=>`<div class="sl"><label for="wi_${s[0]}">${s[1]} <span class="muted">${s[2]}</span></label><output id="wo_${s[0]}"></output><input type="range" id="wi_${s[0]}" data-k="${s[0]}" min="${s[3]}" max="${s[4]}" step="${s[5]}"></div>`).join('');
-    $('#wiS').addEventListener('input',e=>{const k=e.target.dataset.k;if(!k)return;WI[k]=parseFloat(e.target.value);lsSet('wtg_wi2',WI);renderWhatif();});
-    $('#wiReset').addEventListener('click',()=>{WI=wiBase();lsSet('wtg_wi2',WI);renderWhatif();});
+    $('#wiS').addEventListener('input',e=>{const k=e.target.dataset.k;if(!k)return;WI[k]=parseFloat(e.target.value);lsSet('wtg_wi3',WI);renderWhatif();});
+    $('#wiReset').addEventListener('click',()=>{WI=wiBase();lsSet('wtg_wi3',WI);renderWhatif();});
     $('#wiSave').addEventListener('click',()=>{const L=lsGet('wtg_wi_list',[]);L.push({name:'Scenario '+(L.length+1),x:Object.assign({},WI),t:Date.now()});lsSet('wtg_wi_list',L.slice(-8));renderWhatif();});
-    $('#wiList').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const L=lsGet('wtg_wi_list',[]);const i=+b.dataset.i;if(b.dataset.a==='load'&&L[i]){WI=Object.assign({},L[i].x);lsSet('wtg_wi2',WI);}if(b.dataset.a==='del'){L.splice(i,1);lsSet('wtg_wi_list',L);}renderWhatif();});
+    $('#wiList').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const L=lsGet('wtg_wi_list',[]);const i=+b.dataset.i;if(b.dataset.a==='load'&&L[i]){WI=Object.assign({},L[i].x);lsSet('wtg_wi3',WI);}if(b.dataset.a==='del'){L.splice(i,1);lsSet('wtg_wi_list',L);}renderWhatif();});
     attachTip($('#c_wi'));
   }
   WI_SL.forEach(s=>{const i=$('#wi_'+s[0]);if(+i.value!==WI[s[0]])i.value=WI[s[0]];$('#wo_'+s[0]).textContent=fmt(WI[s[0]],s[6]);});
@@ -143,7 +143,7 @@ function renderGrid(){
     <div class="grid2 mt"><div class="card"><h3>Heat delivered <span id="grU"></span></h3><canvas id="c_gr" class="tall"></canvas><div class="legend"></div></div>
     <div class="card"><h3>Delivery through the day <span>average kW of heat by hour, against contract capacity</span></h3><canvas id="c_grh" class="tall"></canvas><div class="legend"></div></div></div>
     <div class="grid2 mt"><div class="card"><h3>Price and earnings <span id="grP"></span></h3><div id="grT"></div></div>
-    <div class="card"><h3>Gas supply contract <span>saved in this browser</span></h3><div class="fgrid" id="grF"></div><div class="note">Syngas is sold per MMBtu, on the basis of 1,000 Nm³ = ${fmt(FIN.mmbtu)} MMBtu. Check this basis: the design gas in the composition table (LHV 13,400 kJ/Nm³) holds about 12.7 MMBtu per 1,000 Nm³. Its heating value is about a third of natural gas, so the factory burners must be made for low calorific gas.</div></div></div>`)){
+    <div class="card"><h3>Gas supply contract <span>saved in this browser</span></h3><div class="fgrid" id="grF"></div><div class="note">Syngas is sold per MMBtu, on the basis of 1,000 Nm³ = ${fmt(FIN.mmbtu)} MMBtu. The design gas in the composition table (LHV 13,400 kJ/Nm³) holds 12.7 MMBtu per 1,000 Nm³. Its heating value is about a third of natural gas, so the factory burners must be made for low calorific gas.</div></div></div>`)){
     attachTip($('#c_gr'));attachTip($('#c_grh'));
     const F=[['ng','Natural gas price (EUR per MMBtu)',0.1],['disc','Syngas discount (%)',1],['mmbtu','MMBtu sold per 1,000 Nm³',0.5]];
     $('#grF').innerHTML=F.map(f=>`<label class="field">${f[1]}<input type="number" min="0" step="${f[2]}" data-f="${f[0]}" value="${FIN[f[0]]}" ${can('edit')?'':'disabled'}></label>`).join('');
