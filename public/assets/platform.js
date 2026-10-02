@@ -264,7 +264,7 @@ function answer(qRaw){
     if(al.length){const sc=al.map(alertToAna);res.acts.push(['Analyze them',()=>openAnalysis(sc,0)]);}res.acts.push(['Open event log',()=>gotoScreen('events')]);return res;}
   /* money */
   if(m.money){const a=accRange(w.t0,w.t1),mo=money(a,bandsBetween(w.t0,w.t1),a.h);
-    res.html=`${w.label[0].toUpperCase()+w.label.slice(1)}: revenue <b>${eur(mo.R)}</b> (electricity ${eur(mo.rev.power)}, subsidy ${eur(mo.rev.subsidy)}, gate fees ${eur(mo.rev.gate)}, carbon credits ${eur(mo.rev.carbon)}), operating costs ${eur(mo.C)}, EBITDA <b>${eur(mo.E)}</b>.`;
+    res.html=`${w.label[0].toUpperCase()+w.label.slice(1)}: revenue <b>${eur(mo.R)}</b> (electricity ${eur(mo.rev.power)}${mo.rev.subsidy?', subsidy '+eur(mo.rev.subsidy):''}, gate fees ${eur(mo.rev.gate)}, carbon credits ${eur(mo.rev.carbon)}), operating costs ${eur(mo.C)}, EBITDA <b>${eur(mo.E)}</b>.`;
     res.acts.push(['Open finance',()=>gotoScreen('finance')]);return res;}
   /* compare with the period before */
   if(cmp){const len=w.t1-w.t0,sh=len<=DAY?DAY:len,a=accRange(w.t0,w.t1),b=accRange(w.t0-sh,w.t1-sh);
