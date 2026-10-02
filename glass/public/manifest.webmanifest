@@ -1,0 +1,15 @@
+{
+  "name": "Central Orbit Gas Console",
+  "short_name": "Gas console",
+  "description": "Waste to energy plant monitoring, alerts, carbon credits and finance.",
+  "start_url": "./#/plant",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#151c23",
+  "theme_color": "#151c23",
+  "icons": [
+    {"src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png"},
+    {"src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"}
+  ]
+}
