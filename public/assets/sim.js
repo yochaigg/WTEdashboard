@@ -28,7 +28,7 @@ function trucksOfDay(ms){
   const di=dayInfo(ms);
   if(truckCache.has(di.start))return truckCache.get(di.start);
   const o=di.ord,f=dayFactor(o);
-  const n=f===0?0:20+Math.floor(hash(o*1.1+0.3)*9);
+  const n=f===0?0:Math.max(1,Math.round((TPD/200)*(20+Math.floor(hash(o*1.1+0.3)*9))));   /* about 24 trucks a day at 200 t/day, more trucks at higher throughput */
   const raw=[],times=[];
   for(let i=0;i<n;i++){raw.push(0.7+0.6*hash(o*3.1+i));times.push(24*(i+0.5+0.5*(hash(o*5.3+i*1.37)-0.5))/n);}
   times.sort((a,b)=>a-b);

@@ -138,7 +138,7 @@ function renderKpis(host,list){
   list.forEach((k,i)=>{
     const el=host.children[i],b=el.querySelector('b'),txt=fmtB(k.v,k.d);
     el.style.setProperty('--kc',k.c||kpiColor(k.l,k.v));el.querySelector('.l').textContent=k.l;el.querySelector('small').textContent=k.u;el.querySelector('.s').textContent=k.s;
-    if(b.textContent!==txt){const had=b.textContent!=='';b.textContent=txt;if(had){b.classList.remove('flash');void b.offsetWidth;b.classList.add('flash');}}
+    if(b.textContent!==txt){const had=b.textContent!==''&&!k.nf;b.textContent=txt;if(had){b.classList.remove('flash');void b.offsetWidth;b.classList.add('flash');}}
   });
 }
 function renderFlow(nodes){
@@ -160,19 +160,23 @@ function statusFor(node){
 }
 function renderMain(){
   const {P,total,cur,eps,bk}=D,live=state.mode==='live',rw=live?'now':'avg';
-  const nTr=total.s.trucks,active=eps.filter(e=>e.end==null),unack=active.filter(e=>!acked.has(e.key));
+  /* Live: running totals since midnight that count up every second, like the plant's own totalisers */
+  const T=live?integrate(dayInfo(P.now).start,P.now).s:total.s;
+  D.todayS=live?T:null;
+  const lastTk=live?trucksBetween(P.now-DAY,P.now+1).filter(k=>k.t<=P.now).pop():null;
+  const nTr=T.trucks,active=eps.filter(e=>e.end==null),unack=active.filter(e=>!acked.has(e.key));
   const K=[
-    ['Waste in (truck scale)','t',total.s.waste,1,P.label],
-    ['Trucks weighed','',nTr,0,'avg '+fmt(nTr?total.s.waste/nTr:0,2)+' t per truck'],
-    ['Briquets to reactor','kg',total.s.briq,0,rw+' '+fmt(cur.briqRate)+' kg/h'],
-    ['Syngas out of reactor','Nm³',total.s.gas,0,rw+' '+fmt(cur.gasRate)+' Nm³/h'],
-    ['Gas to generator','Nm³',total.s.toGen,0,rw+' '+fmt(cur.genRate)+' Nm³/h'],
-    ['Power generated','kWh',total.s.kwh,0,rw+' '+fmt(cur.kw)+' kW'],
-    ['Ash produced','kg',total.s.ash,0,fmt(total.s.briq?total.s.ash/total.s.briq*100:0,1)+' % of feed'],
-    ['Generator CO₂','kg',total.s.co2,0,rw+' '+fmt(cur.co2Rate)+' kg/h'],
+    ['Waste in (truck scale)','t',T.waste,1,live?'today, last truck '+(lastTk?hhmm(lastTk.t):'-'):P.label],
+    ['Trucks weighed','',nTr,0,(live?'today, ':'')+'avg '+fmt(nTr?T.waste/nTr:0,2)+' t per truck'],
+    ['Briquets to reactor','kg',T.briq,0,rw+' '+fmt(cur.briqRate)+' kg/h',1],
+    ['Syngas out of reactor','Nm³',T.gas,0,rw+' '+fmt(cur.gasRate)+' Nm³/h',1],
+    ['Gas to generator','Nm³',T.toGen,0,rw+' '+fmt(cur.genRate)+' Nm³/h',1],
+    ['Power generated','kWh',T.kwh,0,rw+' '+fmt(cur.kw)+' kW',1],
+    ['Ash produced','kg',T.ash,0,fmt(T.briq?T.ash/T.briq*100:0,1)+' % of feed',1],
+    ['Generator CO₂','kg',T.co2,0,rw+' '+fmt(cur.co2Rate)+' kg/h',1],
     ['Active alerts','',active.length,0,unack.length+' not acknowledged']
   ];
-  renderKpis($('#kpis'),K.map(k=>({l:k[0],u:k[1],v:k[2],d:k[3],s:k[4]})));
+  renderKpis($('#kpis'),K.map(k=>({l:k[0]+(live&&k[5]?', today':''),u:k[1],v:k[2],d:k[3],s:k[4],nf:live&&k[5]})));
   renderSchematic([
     ['scale','Truck scale',fmt(total.s.waste,1)+' t',fmt(nTr)+' trucks'],
     ['belt','Conveyor belt',fmtB(total.s.briq)+' kg',rw+' '+fmt(cur.briqRate)+' kg/h'],

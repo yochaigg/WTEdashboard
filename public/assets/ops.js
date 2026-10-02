@@ -60,7 +60,7 @@ function renderSchematic(){
   const {cur,total,P}=D,live=state.mode==='live',rw=live?'now':'avg';
   const nomBriq=1100*S(),nomGas=nomBriq*2.0;
   const own=(typeof FIN!=='undefined'?FIN.own:8)/100;
-  setTxt('v_scale',fmt(total.s.waste,1)+' t');setTxt('s_scale',fmt(total.s.trucks)+' trucks, '+P.label.toLowerCase());
+  const sc=live&&D.todayS?D.todayS:total.s;setTxt('v_scale',fmt(sc.waste,1)+' t');setTxt('s_scale',fmt(sc.trucks)+' trucks, '+(live?'today':P.label.toLowerCase()));
   setTxt('v_belt',fmt(cur.briqRate)+' kg/h');setTxt('s_belt',rw+' briquet feed');
   setTxt('v_reactor',fmt(cur.reactor)+' °C');setTxt('s_reactor',fmt(cur.gasRate)+' Nm³/h syngas out');
   setTxt('v_ash',fmt(cur.ashRate)+' kg/h');setTxt('s_ash','');
@@ -72,7 +72,7 @@ function renderSchematic(){
   setTxt('engMore',ENGINES>4?'+ '+(ENGINES-4)+' more engines':'');
   for(let i=0;i<4;i++){const f=document.getElementById('fan'+i);if(f){f.style.opacity=i<ENGINES?1:.2;f.classList.toggle('stop',!(cur.kw>1)||i>=ENGINES);}}
   const fc=document.getElementById('fanc');if(fc)fc.classList.toggle('stop',!(cur.genRate>1));
-  setFlow('f_waste',total.s.trucks?1:0.3);setFlow('f_belt',cur.briqRate/nomBriq);setFlow('f_ash',cur.ashRate/(nomBriq*0.11));
+  setFlow('f_waste',1);setFlow('f_belt',cur.briqRate/nomBriq);setFlow('f_ash',cur.ashRate/(nomBriq*0.11));
   ['f_gas1','f_gas2','f_gas3','f_gas4'].forEach(id=>setFlow(id,cur.gasRate/nomGas));setFlow('f_pow',cur.kw/(RATED_KW*0.9));
   const g=document.getElementById('glow');if(g){const k=Math.max(0,Math.min(1,(cur.reactor-150)/820));g.setAttribute('opacity',(0.15+0.85*k).toFixed(2));g.setAttribute('ry',(40+45*k).toFixed(0));}
   const sp=document.getElementById('spark');if(sp)sp.style.opacity=cur.kv>5?1:0;
