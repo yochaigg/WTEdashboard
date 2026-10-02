@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Central Orbit Gas Console</title>
+<meta name="theme-color" content="#151c23">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Semi+Condensed:wght@500;600&display=swap">
+<link rel="stylesheet" href="assets/base.css">
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<div class="app">
+<nav id="rail" aria-label="Pages">
+  <div class="brand2"><svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="15.5" fill="none" stroke="#3a4855" stroke-width="1.5"/><path d="M17 7c4 5 6 8 6 11.5a6 6 0 0 1-12 0c0-2.4 1.3-4.3 2.8-5.6.2 2 1 3.2 2.4 3.6-.6-3.4.2-6.5.8-9.5z" fill="#ff8f45"/></svg><div><b>Central Orbit</b><span>Waste to gas for glass</span></div></div>
+  <form class="askbox" id="askForm" role="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="color:var(--muted)"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="askQ" placeholder="Ask the plant" aria-label="Ask the plant a question"></form>
+  <div class="ng"><h6>Operations</h6><a href="#/plant" data-p="plant"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21V10l5 3V10l5 3V5h4v16z"/><path d="M3 21h18"/></svg><span>Plant</span></a><a href="#/events" data-p="events"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg><span>Event log</span></a><a href="#/alarms" data-p="alarms"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/></svg><span>Alarm rules</span><em class="cnt" id="navAlarmCnt" hidden></em></a><a href="#/maint" data-p="maint"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.8-.7-.7-2.8z"/></svg><span>Maintenance</span></a><a href="#/shifts" data-p="shifts"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Shift handover</span></a></div><div class="ng"><h6>Materials</h6><a href="#/suppliers" data-p="suppliers"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7z"/><circle cx="7" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/></svg><span>Suppliers</span></a><a href="#/balance" data-p="balance"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6c8 0 8 6 18 6M3 12h18M3 18c8 0 8-6 18-6"/></svg><span>Mass and energy</span></a></div><div class="ng"><h6>Business</h6><a href="#/finance" data-p="finance"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>Finance</span></a><a href="#/whatif" data-p="whatif"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg><span>What-if</span></a><a href="#/grid" data-p="grid"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l-3 8h6l-3 8M5 22h14"/></svg><span>Gas sales</span></a><a href="#/carbon" data-p="carbon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20c0-9 6-15 15-16-1 9-7 15-15 16z"/><path d="M5 20l8-8"/></svg><span>Carbon credits</span></a><a href="#/impact" data-p="impact"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg><span>Impact</span></a></div><div class="ng"><h6>Company</h6><a href="#/sites" data-p="sites"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg><span>Sites</span></a><a href="#/ask" data-p="ask"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.7A8 8 0 1 1 21 12z"/></svg><span>Ask the plant</span></a></div>
+  <div class="railfoot">
+    <button class="who" id="whoBtn" title="Switch role"><i id="whoInit">?</i><div><span id="whoName">Not signed in</span><small id="whoRole"></small></div></button>
+    <button class="btn" id="btnInstall" hidden>Install as app</button>
+    <div class="ver">Gas version preview, branch feature/next-level</div>
+  </div>
+</nav>
+<div class="main">
+<header class="top">
+  <button id="hamb" aria-label="Open menu"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+  <div class="ttl"><h1 id="pgTitle">Plant</h1><span id="plabel"></span></div>
+  <div class="sp"></div>
+  <div class="modes" id="modes"><button data-m="live">Live</button><button data-m="day">Day</button><button data-m="month">Month</button><button data-m="year">Year</button></div>
+  <label class="tpd" title="Waste processed per day. Type a new value to update everything.">Throughput <input id="tpd" type="number" min="1" max="5000" step="10" value="200"> t/day</label>
+  <button class="btn" id="btnCsv" title="Download the data of this page as a CSV file">Export CSV</button>
+  <span class="badge ok" id="alertBadge">No active alerts</span>
+  <span class="badge live" title="Live data"><i></i><span id="clock"></span></span>
+</header>
+<div id="err" class="err" hidden></div>
+<section class="page" data-page="plant">
+  <div class="schem" id="schem"></div>
+  <div class="kpis" id="kpis"></div>
+  <div class="layout mt">
+    <div class="cards" id="mainCharts"></div>
+    <aside>
+      <div class="card"><h3>Alerts <span>last 24 h</span></h3><div id="alertList"></div></div>
+      <div class="card"><h3>Output drops <span id="dropLbl"></span></h3><div id="drops"></div></div>
+      <div class="card"><h3>Gas analyzer <span id="anLbl"></span></h3><div id="analyzer"></div></div>
+      <div class="card"><h3>Gas quality at delivery <span id="emLbl"></span></h3><div id="emis"></div></div>
+      <div class="card"><h3>Efficiency</h3><div id="eff"></div></div>
+      <div class="card"><h3>Gas delivery to the factory <span id="genLbl"></span></h3><div id="gens"></div></div>
+      <div class="card"><h3>Process health <span id="phLbl"></span></h3><div id="health"></div></div>
+      <div class="card"><h3>Truck scale tickets</h3><div id="tickets"></div></div>
+    </aside>
+  </div>
+</section>
+<section class="page" data-page="events" hidden>
+  <div class="evbar"><div class="chips" id="evChips"></div><input id="evSearch" class="srch" placeholder="Search plate, ticket or text"></div>
+  <div class="card"><div class="scrollx" id="evTable"></div><div class="pager" id="evPager"></div></div>
+</section>
+<section class="page" data-page="carbon" hidden>
+  <div class="title"><button class="btn pri" id="btnPkg">Prepare for audit</button></div>
+  <div id="autoBar" class="autobar"></div>
+  <div class="kpis" id="ckpis"></div>
+  <div class="two" id="carbonCharts"></div>
+  <div class="two">
+    <div class="card"><h3>Assumptions <span>editable, saved in this browser</span></h3>
+      <div class="form">
+        <label for="fLand">9.1 Landfill avoidance factor (tCO2e per t waste)</label><input id="fLand" type="number" step="0.01" min="0">
+        <label for="fPreset">9.2 Fuel the furnace burned before</label>
+        <select id="fPreset"><option value="0.202">Natural gas</option><option value="0.279">Heavy fuel oil</option><option value="0.227">LPG</option><option value="">Custom</option></select>
+        <label for="fDisp">9.2 Emission factor (kg CO2 per kWh of heat)</label><input id="fDisp" type="number" step="0.001" min="0">
+        <label for="fFossil">Fossil share of CO2 from burning syngas (%)</label><input id="fFossil" type="number" step="1" min="0" max="100">
+        <label for="fPrice">Credit price (EUR per tCO2e, compliance market)</label><input id="fPrice" type="number" step="0.5" min="0">
+      </div>
+      <div class="note">Credit price is set to 70 EUR (compliance market). Natural gas is set to 0.202 kg CO2 per kWh (IPCC default, 56.1 kg per GJ). The landfill factor and fossil share are placeholders. Replace them with the factors from the carbon methodology and verifier you use before quoting any number externally.</div>
+    </div>
+    <div class="card"><h3>How the numbers are calculated <span id="cbLbl"></span></h3><div id="breakdown"></div></div>
+  </div>
+</section>
+<section class="page" data-page="alarms" hidden><div id="pg_alarms"></div></section>
+<section class="page" data-page="maint" hidden><div id="pg_maint"></div></section>
+<section class="page" data-page="shifts" hidden><div id="pg_shifts"></div></section>
+<section class="page" data-page="suppliers" hidden><div id="pg_suppliers"></div></section>
+<section class="page" data-page="balance" hidden><div id="pg_balance"></div></section>
+<section class="page" data-page="finance" hidden><div id="pg_finance"></div></section>
+<section class="page" data-page="whatif" hidden><div id="pg_whatif"></div></section>
+<section class="page" data-page="grid" hidden><div id="pg_grid"></div></section>
+<section class="page" data-page="impact" hidden><div id="pg_impact"></div></section>
+<section class="page" data-page="sites" hidden><div id="pg_sites"></div></section>
+<section class="page" data-page="ask" hidden><div id="pg_ask"></div></section>
+
+</div>
+</div>
+<div id="ana" class="modal" hidden>
+  <div class="mbox big">
+    <div class="mh"><div><h3 id="anaTitle">Analysis</h3><div class="muted" id="anaSub"></div></div><button class="btn" id="anaX">Close</button></div>
+    <label class="anasel">Event <select id="anaSel"></select></label>
+    <div class="kpis small" id="anaK"></div>
+    <div class="card"><h3>Behavior around the event <span>% of the normal level before it, red band is the event</span></h3><canvas id="anaChart"></canvas><div class="legend"></div></div>
+    <div class="card"><h3>What happened</h3><div id="anaText"></div></div>
+    <div class="card"><h3>Parameters</h3><div class="scrollx" id="anaTable"></div></div>
+    <div class="card"><h3>Context</h3><div id="anaCtx"></div></div>
+    <div class="mact"><button class="btn pri" id="anaCsv">Download analysis CSV</button><button class="btn" id="anaLog">Open event log</button></div>
+  </div>
+</div>
+<div id="evd" class="modal" hidden>
+  <div class="mbox">
+    <div class="mh"><h3>Truck, LPR and offloading camera</h3><button class="btn" id="evdX">Close</button></div>
+    <div id="evdBody"></div>
+  </div>
+</div>
+
+<div id="pkg" class="modal" hidden>
+  <div class="mbox">
+    <div class="mh"><h3>Prepare for audit</h3><button class="btn" id="pkgX">Close</button></div>
+    <div class="warn" id="pkgWarn"></div>
+    <div class="form2">
+      <label>Verifier name<input id="pkgName"></label>
+      <label>Verifier email (to)<input id="pkgMail" placeholder="verifier@example.com"></label>
+      <label>Site operator email (copy)<input id="pkgOp" placeholder="operator@example.com"></label>
+      <label>Facility<input id="pkgFac"></label>
+      <label>Methodology<input id="pkgMeth"></label>
+      <label>Project reference<input id="pkgPid"></label>
+      <label>Period for manual push<select id="pkgPer"></select></label>
+      <label class="auto"><span>Automatic monthly report</span><span class="row"><input type="checkbox" id="pkgAuto"> on, send on day <select id="pkgDay"></select> of each month</span></label>
+      <label class="wide">Webhook URL (this is what sends the email for you)<input id="pkgHook" placeholder="https://hook.eu1.make.com/..."></label>
+    </div>
+    <div class="note" id="pkgHookNote">A web page cannot send email by itself. The webhook is a link from Make, Zapier, n8n or Power Automate that receives the report and emails it. Without it, the buttons open an email draft and download the CSV so you can attach it. Automatic reports only run while this dashboard is open in a browser.</div>
+    <div id="pkgSum"></div>
+    <label class="ta">Message (editable, rebuilt when you change a field above)<textarea id="pkgMsg" rows="13"></textarea></label>
+    <label class="chk" id="pkgOkWrap"><input type="checkbox" id="pkgOk"> This is simulated demo data. Send anyway.</label>
+    <div class="mact">
+      <button class="btn pri" id="pkgPush">Push to verifier</button>
+      <input id="pkgOther" class="oth" placeholder="or type an email address">
+      <button class="btn" id="pkgPushOther">Send to this email</button>
+    </div>
+    <div id="pkgStatus" class="status"></div>
+    <div class="mact">
+      <button class="btn" id="pkgCsv">Download data CSV</button>
+      <button class="btn" id="pkgTxt">Download summary</button>
+      <button class="btn" id="pkgCopy">Copy message</button>
+      <button class="btn" id="pkgMailBtn">Open email draft</button>
+    </div>
+    <h4 class="lh">Send log</h4>
+    <div id="pkgLog"></div>
+    <div class="note" id="pkgNote"></div>
+  </div>
+</div>
+
+<div id="login" class="modal" hidden>
+  <div class="mbox">
+    <div class="mh"><h3>Who is using the console?</h3><button class="btn" id="loginX" hidden>Close</button></div>
+    <p class="muted" style="margin:0">Pick your role. Each role sees the pages and buttons it needs.</p>
+    <div class="roles" id="roleList"></div>
+    <div class="fgrid"><label class="field">Your name<input id="loginName" placeholder="e.g. Ana, shift lead" autocomplete="name"></label><label class="field" id="pinWrap" hidden>PIN for this role<input id="loginPin" type="password" inputmode="numeric" autocomplete="off"></label></div>
+    <div class="status" id="loginMsg"></div>
+    <div class="mact"><button class="btn pri" id="loginGo">Enter console</button></div>
+    <div class="note">Roles here are a convenience on this device, not security. To restrict who can open the dashboard, put it behind Cloudflare Access (Zero Trust) so people sign in with their email first.</div>
+  </div>
+</div>
+<div class="tip" id="tip"></div>
+<script src="assets/sim.js"></script>
+<script src="assets/core.js"></script>
+<script src="assets/ops.js"></script>
+<script src="assets/business.js"></script>
+<script src="assets/platform.js"></script>
+<script src="assets/boot.js"></script>
+</body>
+</html>
