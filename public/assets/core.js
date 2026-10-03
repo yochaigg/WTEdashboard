@@ -15,7 +15,7 @@ function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
 /* page registry: every page registers {title, render, period, csv, roles} */
 const PAGES={};
 function pageOf(h){const m=/^#\/([\w-]+)/.exec(h||'');const id=m?m[1]:'plant';return PAGES[id]?id:'plant';}
-const state={mode:'live',anchor:new Date(),screen:'plant'};
+const state={mode:'live',anchor:new Date(),screen:'plant',days:Math.min(1825,Math.max(1,+lsGet('wte_days',7)||7))};
 let acked=new Set(lsGet('wte_ack',[]));
 const cfg=Object.assign({land:0.5,disp:0.70,fossil:30,price:70},lsGet('wte_carbon2',{}));
 /* display currency: inputs stay in EUR, everything shown on screen is converted at the latest rate.
@@ -98,8 +98,10 @@ function period(){
   if(m==='live'){t0=dayInfo(now).start;label='Today so far';}
   else if(m==='day'){t0=Math.floor(now/HOUR)*HOUR-23*HOUR;label='Last 24 hours';}
   else if(m==='month'){t0=new Date(nd.getFullYear(),nd.getMonth(),nd.getDate()-29).getTime();label='Last 30 days';}
+  else if(m==='custom'){const n=state.days;t0=new Date(nd.getFullYear(),nd.getMonth(),nd.getDate()-(n-1)).getTime();label=n===1?'Today':'Last '+n+' days';
+    UNIT_PER.custom=n<=3?'per hour':n<=62?'per day':n<=366?'per week':'per 30 days';}
   else{t0=new Date(nd.getFullYear(),nd.getMonth()-11,1).getTime();label='Last 12 months';}
-  range=(m==='live'||m==='day')?dt(t0)+' to '+hhmm(now):fd(t0)+' to '+fd(now);
+  range=(m==='live'||m==='day'||(m==='custom'&&state.days<=3))?dt(t0)+' to '+hhmm(now):fd(t0)+' to '+fd(now);
   return {m,t0,tEnd:now,t1:now,label,range,now};
 }
 function getBuckets(P){
@@ -110,6 +112,14 @@ function getBuckets(P){
     if(!out.length)out.push({t:P.t0,label:hhmm(P.t0),acc:integrate(P.t0,now)});
   }else if(m==='day'){
     for(let i=0;i<24;i++){const a=P.t0+i*HOUR;out.push({t:a,label:pad(new Date(a).getHours())+':00',acc:a<now?integrate(a,Math.min(a+HOUR,now)):null});}
+  }else if(m==='custom'){
+    /* custom number of days: hourly bars up to 3 days, daily up to 62, weekly up to a year, then 30-day blocks */
+    const n=state.days;
+    if(n<=3){for(let a=P.t0;a<now;a+=HOUR)out.push({t:a,label:(n>1?new Date(a).getDate()+'/'+(new Date(a).getMonth()+1)+' ':'')+pad(new Date(a).getHours())+':00',acc:integrate(a,Math.min(a+HOUR,now))});}
+    else{const d0=new Date(P.t0),per=n<=62?1:n<=366?7:30;
+      for(let i=0;i<n;i+=per){const a=new Date(d0.getFullYear(),d0.getMonth(),d0.getDate()+i);if(a.getTime()>now)break;const acc=newAcc();
+        for(let j=0;j<per&&i+j<n;j++){const dd=new Date(d0.getFullYear(),d0.getMonth(),d0.getDate()+i+j).getTime();if(dd>now)break;mergeAcc(acc,dayAcc(dd,now));}
+        out.push({t:a.getTime(),label:a.getDate()+'/'+(a.getMonth()+1)+(per>=7&&(i===0||a.getMonth()===0&&a.getDate()<=per)?'/'+String(a.getFullYear()).slice(2):''),acc});}}
   }else if(m==='month'){
     const d0=new Date(P.t0);
     for(let i=0;i<30;i++){const a=new Date(d0.getFullYear(),d0.getMonth(),d0.getDate()+i);out.push({t:a.getTime(),label:a.getDate()+'/'+(a.getMonth()+1),acc:dayAcc(a.getTime(),now)});}
@@ -132,7 +142,7 @@ function buildData(){
   for(let mo=0;mo<12;mo++){const a=monthAcc(y,mo,P.now);if(a)mergeAcc(ytd,a);}
   return {P,bk,total,snaps,cur,eps:alertCache.eps,ytd};
 }
-const UNIT_PER={live:'per 30 min',day:'per hour',month:'per day',year:'per month'};
+const UNIT_PER={custom:'per day',live:'per 30 min',day:'per hour',month:'per day',year:'per month'};
 function kpiColor(l,v){l=l.toLowerCase();
   if(/alert/.test(l))return v>0?'var(--amber)':'var(--line2)';
   if(/credit|co2e|landfill|fossil|carbon/.test(l)&&!/generator/.test(l))return 'var(--carbon)';
@@ -285,7 +295,7 @@ function tick(force){
   $('#clock').textContent=new Date(now).toLocaleDateString('en-GB',{day:'numeric',month:'short'})+' '+hhmmss(now);
   document.querySelectorAll('#modes button').forEach(b=>b.classList.toggle('on',b.dataset.m===state.mode));
   const pg=PAGES[state.screen]||{},live=state.mode==='live';
-  const key=state.mode+'|'+state.screen+'|'+Math.floor(now/(live?1000:15000));
+  const key=state.mode+'|'+state.days+'|'+state.screen+'|'+Math.floor(now/(live?1000:15000));
   if(!force&&(key===lastKey||pg.still))return;
   lastKey=key;
   try{
@@ -297,6 +307,12 @@ function tick(force){
   }catch(e){showErr(e);}
 }
 document.querySelectorAll('#modes button').forEach(b=>b.addEventListener('click',()=>{state.mode=b.dataset.m;tick(true);}));
+/* custom time frame in days */
+(()=>{const i=$('#cdays');i.value=state.days;let tm;
+  const apply=()=>{const v=Math.round(+i.value);if(!(v>=1))return;state.days=Math.min(1825,v);if(+i.value!==state.days)i.value=state.days;lsSet('wte_days',state.days);state.mode='custom';tick(true);};
+  i.addEventListener('input',()=>{clearTimeout(tm);tm=setTimeout(apply,350);});
+  i.addEventListener('change',apply);i.addEventListener('focus',()=>{if(state.mode!=='custom'){state.mode='custom';tick(true);}});
+  i.addEventListener('keydown',e=>{if(e.key==='Enter'){clearTimeout(tm);apply();i.blur();}});})();
 $('#alertList').addEventListener('click',e=>{const k=e.target.dataset&&e.target.dataset.ack;if(k&&can('ack')){acked.add(k);lsSet('wte_ack',[...acked]);addOp('Alert acknowledged ('+k.split('@')[0]+')');tick(true);}});
 makeCards($('#mainCharts'),MAIN_CARDS);makeCards($('#carbonCharts'),CARBON_CARDS);
 /* assumptions form */

@@ -30,7 +30,7 @@
   <button id="hamb" aria-label="Open menu"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
   <div class="ttl"><h1 id="pgTitle">Plant</h1><span id="plabel"></span></div>
   <div class="sp"></div>
-  <div class="modes" id="modes"><button data-m="live">Live</button><button data-m="day">Day</button><button data-m="month">Month</button><button data-m="year">Year</button></div>
+  <div class="modes" id="modes"><button data-m="live">Live</button><button data-m="day">Day</button><button data-m="month">Month</button><button data-m="year">Year</button><button data-m="custom" title="Custom time frame: the last N days">Custom</button><label class="cdays" title="Number of days, ending now"><input id="cdays" type="number" min="1" max="1825" step="1" inputmode="numeric" aria-label="Custom time frame in days"><span>days</span></label></div>
   <div class="modes" id="curSel" role="group" aria-label="Currency"><button data-c="EUR">EUR</button><button data-c="USD">USD</button><button data-c="GBP">GBP</button></div>
   <label class="tpd" title="Waste processed per day. Type a new value to update everything.">Throughput <input id="tpd" type="number" min="1" max="5000" step="10" value="200"> t/day</label>
   <button class="btn" id="btnCsv" title="Download the data of this page as a CSV file">Export CSV</button>
