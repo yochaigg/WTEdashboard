@@ -10,11 +10,15 @@ export function parseSendeco2(html,now=new Date()){
   const text=html.replace(/<script[\s\S]*?<\/script>/gi,' ').replace(/<style[\s\S]*?<\/style>/gi,' ')
     .replace(/<[^>]+>/g,' ').replace(/&nbsp;|&#160;/g,' ').replace(/&euro;|&#8364;/g,'€').replace(/\s+/g,' ');
   const re=new RegExp('('+MONTHS.join('|')+')\\s*:?\\s*([\\d.]+,\\d+)\\s*€','g');
+  const clean=h=>h.replace(/<[^>]+>/g,' ').replace(/&nbsp;|&#160;/g,' ').replace(/&euro;|&#8364;/g,'€').replace(/\s+/g,' ');
   for(const y of [now.getFullYear(),now.getFullYear()-1]){
-    const at=text.search(new RegExp('\\b'+y+'\\b[^€]{0,400}?Enero'));
+    let src=text,at=-1;
+    const tab=html.indexOf('brcm-sendeco-tab-'+y+'"',html.indexOf('tab_container'));
+    if(tab>=0){const end=html.indexOf('</table>',tab);src=clean(html.slice(tab,end>0?end:tab+20000));at=0;}
+    else at=text.search(new RegExp('\\b'+y+'\\b[\\s\\S]{0,400}?Enero'));
     if(at<0)continue;
     re.lastIndex=at;let m,seen=0,best=null;
-    while(seen<12&&(m=re.exec(text))){
+    while(seen<12&&(m=re.exec(src))){
       seen++;const v=parseFloat(m[2].replace(/\./g,'').replace(',','.'));
       if(v>5&&v<500)best={price:v,month:MONTHS_EN[MONTHS.indexOf(m[1])]+' '+y};
       if(m[1]==='Diciembre')break;
