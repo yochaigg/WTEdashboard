@@ -32,7 +32,7 @@ async function carbonPrice(ctx,debug){
     const r=await fetch(SRC,{headers:{'User-Agent':'Mozilla/5.0 (plant dashboard price check)','Accept':'text/html'},cf:{cacheTtl:TTL}});
     if(!r.ok)throw new Error('source answered '+r.status);
     const html=await r.text();const p=parseSendeco2(html);
-    if(!p)throw new Error('price not found on the source page'+(debug?': '+html.length+' chars, '+html.replace(/\s+/g,' ').slice(0,1500):''));
+    if(!p)throw new Error('price not found on the source page'+(debug?': '+(()=>{const h=html.replace(/\s+/g,' ');const i=h.indexOf('Enero');return i+' | '+h.slice(Math.max(0,i-900),i+1500);})():''));
     body={ok:true,price:p.price,currency:'EUR',unit:'tCO2e',market:'EU ETS allowance (EUA)',basis:'monthly average, '+p.month,source:'SendeCO2',sourceUrl:SRC,fetchedAt:new Date().toISOString()};
   }catch(e){body={ok:false,error:String(e.message||e)};status=503;}
   const res=new Response(JSON.stringify(body),{status:200,headers:{'Content-Type':'application/json','Cache-Control':status===200?'public, max-age='+TTL:'no-store','Access-Control-Allow-Origin':'*'}});
