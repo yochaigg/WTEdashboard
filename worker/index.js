@@ -24,18 +24,18 @@ export function parseSendeco2(html,now=new Date()){
   return null;
 }
 
-async function carbonPrice(ctx){
+async function carbonPrice(ctx,debug){
   const cache=caches.default,key=new Request('https://cache.local/carbon-price-v1');
-  const hit=await cache.match(key);if(hit)return hit;
+  const hit=debug?null:await cache.match(key);if(hit)return hit;
   let body,status=200;
   try{
     const r=await fetch(SRC,{headers:{'User-Agent':'Mozilla/5.0 (plant dashboard price check)','Accept':'text/html'},cf:{cacheTtl:TTL}});
     if(!r.ok)throw new Error('source answered '+r.status);
-    const p=parseSendeco2(await r.text());
-    if(!p)throw new Error('price not found on the source page');
+    const html=await r.text();const p=parseSendeco2(html);
+    if(!p)throw new Error('price not found on the source page'+(debug?': '+html.length+' chars, '+html.replace(/\s+/g,' ').slice(0,1500):''));
     body={ok:true,price:p.price,currency:'EUR',unit:'tCO2e',market:'EU ETS allowance (EUA)',basis:'monthly average, '+p.month,source:'SendeCO2',sourceUrl:SRC,fetchedAt:new Date().toISOString()};
-  }catch(e){body={ok:false,error:String(e.message||e)};status=502;}
-  const res=new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json','Cache-Control':status===200?'public, max-age='+TTL:'no-store','Access-Control-Allow-Origin':'*'}});
+  }catch(e){body={ok:false,error:String(e.message||e)};status=503;}
+  const res=new Response(JSON.stringify(body),{status:200,headers:{'Content-Type':'application/json','Cache-Control':status===200?'public, max-age='+TTL:'no-store','Access-Control-Allow-Origin':'*'}});
   if(status===200)ctx.waitUntil(cache.put(key,res.clone()));
   return res;
 }
@@ -43,7 +43,7 @@ async function carbonPrice(ctx){
 export default{
   async fetch(req,env,ctx){
     const u=new URL(req.url);
-    if(u.pathname==='/api/carbon-price')return carbonPrice(ctx);
+    if(u.pathname==='/api/carbon-price')return carbonPrice(ctx,u.searchParams.has('debug'));
     return env.ASSETS.fetch(req);
   }
 };
