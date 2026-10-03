@@ -44,10 +44,37 @@ async function carbonPrice(ctx,debug){
   return res;
 }
 
+/* /api/fx -> euro exchange rates. Source: European Central Bank reference rates via Frankfurter,
+   with open.er-api.com as a backup. Cached for 6 hours. */
+const FX_SYMS=['USD','GBP'];
+async function fxRates(ctx,debug){
+  const cache=caches.default,key=new Request('https://cache.local/fx-v1');
+  const hit=debug?null:await cache.match(key);if(hit)return hit;
+  let body,errs=[];
+  try{
+    const r=await fetch('https://api.frankfurter.dev/v1/latest?base=EUR&symbols='+FX_SYMS.join(','),{headers:{'Accept':'application/json'}});
+    if(!r.ok)throw new Error('Frankfurter answered '+r.status);
+    const j=await r.json();if(!j.rates||!FX_SYMS.every(c=>j.rates[c]>0))throw new Error('Frankfurter: rates missing');
+    body={ok:true,base:'EUR',date:j.date,rates:{EUR:1,...j.rates},source:'European Central Bank reference rate',fetchedAt:new Date().toISOString()};
+  }catch(e){errs.push(String(e.message||e));}
+  if(!body)try{
+    const r=await fetch('https://open.er-api.com/v6/latest/EUR');
+    if(!r.ok)throw new Error('open.er-api answered '+r.status);
+    const j=await r.json();if(j.result!=='success'||!FX_SYMS.every(c=>j.rates&&j.rates[c]>0))throw new Error('open.er-api: rates missing');
+    const rates={EUR:1};FX_SYMS.forEach(c=>rates[c]=j.rates[c]);
+    body={ok:true,base:'EUR',date:new Date(j.time_last_update_unix*1000).toISOString().slice(0,10),rates,source:'open.er-api.com',fetchedAt:new Date().toISOString()};
+  }catch(e){errs.push(String(e.message||e));}
+  if(!body)body={ok:false,error:errs.join('; ')};
+  const res=new Response(JSON.stringify(body),{status:200,headers:{'Content-Type':'application/json','Cache-Control':body.ok?'public, max-age='+TTL:'no-store','Access-Control-Allow-Origin':'*'}});
+  if(body.ok)ctx.waitUntil(cache.put(key,res.clone()));
+  return res;
+}
+
 export default{
   async fetch(req,env,ctx){
     const u=new URL(req.url);
     if(u.pathname==='/api/carbon-price')return carbonPrice(ctx,u.searchParams.has('debug'));
+    if(u.pathname==='/api/fx')return fxRates(ctx,u.searchParams.has('debug'));
     return env.ASSETS.fetch(req);
   }
 };

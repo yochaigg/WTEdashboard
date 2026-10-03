@@ -85,29 +85,29 @@ function renderFinance(){
   }
   const {P,bk}=D,f=finData(),t=f.tot,hrs=D.total.h||1;
   renderKpis($('#finK'),[
-    {l:'Syngas sales',u:'EUR',v:t.rev.gas+t.rev.sur,d:0,s:fmt(t.sold)+' MMBtu × €'+fmt(gasPrice(),2),c:'var(--gas)'},
-    ...(FAC.eng?[{l:'Electricity sales',u:'EUR',v:t.rev.power,d:0,s:fmt(t.expKwh)+' kWh × €'+fmt(FAC.elecSell,2),c:'var(--power)'}]:[]),
-    {l:'Gate fees',u:'EUR',v:t.rev.gate,d:0,s:fmt(D.total.s.waste,1)+' t × €'+fmt(FIN.gate),c:'var(--waste)'},
-    {l:'Carbon credits',u:'EUR',v:t.rev.carbon,d:0,s:fmt(credits(D.total).net,1)+' tCO2e × €'+fmt(cfg.price),c:'var(--carbon)'},
+    {l:'Syngas sales',u:'EUR',v:t.rev.gas+t.rev.sur,d:0,s:fmt(t.sold)+' MMBtu × '+cs(gasPrice(),2),c:'var(--gas)'},
+    ...(FAC.eng?[{l:'Electricity sales',u:'EUR',v:t.rev.power,d:0,s:fmt(t.expKwh)+' kWh × '+cs(FAC.elecSell,2),c:'var(--power)'}]:[]),
+    {l:'Gate fees',u:'EUR',v:t.rev.gate,d:0,s:fmt(D.total.s.waste,1)+' t × '+cs(FIN.gate),c:'var(--waste)'},
+    {l:'Carbon credits',u:'EUR',v:t.rev.carbon,d:0,s:fmt(credits(D.total).net,1)+' tCO2e × '+cs(cfg.price),c:'var(--carbon)'},
     {l:'Total revenue',u:'EUR',v:t.R,d:0,s:FAC.eng?'syngas, electricity, gate fees and credits':'syngas, gate fees and credits',c:'var(--money)'},
-    {l:'Operating costs',u:'EUR',v:t.C,d:0,s:fmt(FIN.opexPct,1)+' % of €'+fmt(FIN.capex)+' M a year, plus electricity'},
+    {l:'Operating costs',u:'EUR',v:t.C,d:0,s:fmt(FIN.opexPct,1)+' % of '+cs(FIN.capex)+' M a year, plus electricity'},
     {l:'EBITDA',u:'EUR',v:t.E,d:0,s:'margin '+fmt(t.R?t.E/t.R*100:0,1)+' %',c:t.E>=0?'var(--money)':'var(--red)'},
     {l:'Factory saving',u:'EUR',v:t.save,d:0,s:fmt(FIN.disc)+' % below its '+fuelName()+' bill'},
     {l:'Annual run rate',u:'EUR',v:t.E/hrs*24*365,d:0,s:'EBITDA at this rate for a year'}
   ]);
-  $('#finU').textContent='EUR '+UNIT_PER[state.mode];$('#finP').textContent='('+P.label.toLowerCase()+')';
+  $('#finU').textContent=curCode()+' '+UNIT_PER[state.mode];$('#finP').textContent='('+P.label.toLowerCase()+')';
   drawChart($('#c_fin'),{labels:bk.map(b=>b.label),series:[
-    {name:'Syngas sales',color:'#8ccbe0',type:'bar',data:f.rows.map(m=>m&&m.rev.gas),dec:0},
-    {name:'Gate fees',color:'#c4ad86',type:'bar',data:f.rows.map(m=>m&&m.rev.gate),dec:0},
-    {name:'Carbon credits',color:'#86c99a',type:'bar',data:f.rows.map(m=>m&&m.rev.carbon),dec:0},
-    {name:'Costs',color:'#5d6a77',type:'bar',data:f.rows.map(m=>m&&-m.C),dec:0},
-    {name:'EBITDA',color:'#d9c46a',type:'line',data:f.rows.map(m=>m&&m.E),dec:0}]});
+    {name:'Syngas sales',color:'#8ccbe0',type:'bar',data:f.rows.map(m=>m&&(m.rev.gas)*curRate()),dec:0},
+    {name:'Gate fees',color:'#c4ad86',type:'bar',data:f.rows.map(m=>m&&(m.rev.gate)*curRate()),dec:0},
+    {name:'Carbon credits',color:'#86c99a',type:'bar',data:f.rows.map(m=>m&&(m.rev.carbon)*curRate()),dec:0},
+    {name:'Costs',color:'#5d6a77',type:'bar',data:f.rows.map(m=>m&&(-m.C)*curRate()),dec:0},
+    {name:'EBITDA',color:'#d9c46a',type:'line',data:f.rows.map(m=>m&&(m.E)*curRate()),dec:0}]});
   const L=(a,b,c)=>`<tr><td>${a}</td><td class="r muted">${b}</td><td class="r num">${c}</td></tr>`;
   $('#finPL').innerHTML='<table>'+
-    L('Syngas to the bottle factory',fmt(t.sold)+' MMBtu × €'+fmt(gasPrice(),2),eur(t.rev.gas))+(FAC.eng?L('Electricity from the engines, exported',fmt(t.expKwh)+' kWh × €'+fmt(FAC.elecSell,2),eur(t.rev.power)):'')+(t.sur>0.5?L('Gas not used',fmt(t.sur)+' MMBtu, no buyer yet',eur(t.rev.sur)):'')+L('Gate fees',fmt(D.total.s.waste,1)+' t × €'+fmt(FIN.gate),eur(t.rev.gate))+L('Carbon credits',fmt(credits(D.total).net,1)+' tCO2e × €'+fmt(cfg.price),eur(t.rev.carbon))+
+    L('Syngas to the bottle factory',fmt(t.sold)+' MMBtu × '+cs(gasPrice(),2),eur(t.rev.gas))+(FAC.eng?L('Electricity from the engines, exported',fmt(t.expKwh)+' kWh × '+cs(FAC.elecSell,2),eur(t.rev.power)):'')+(t.sur>0.5?L('Gas not used',fmt(t.sur)+' MMBtu, no buyer yet',eur(t.rev.sur)):'')+L('Gate fees',fmt(D.total.s.waste,1)+' t × '+cs(FIN.gate),eur(t.rev.gate))+L('Carbon credits',fmt(credits(D.total).net,1)+' tCO2e × '+cs(cfg.price),eur(t.rev.carbon))+
     L('<b>Revenue</b>','','<b>'+eur(t.R)+'</b>')+
-    L('Operating cost',fmt(FIN.opexPct,1)+' % × €'+fmt(FIN.capex)+' M a year, '+(hrs<48?fmt(hrs,1)+' h':fmt(hrs/24,1)+' days'),'-'+eur(t.cost.opex))+
-    L('Electricity bought',(t.ownKwh<1?'none, the engines cover the plant':fmt(t.ownKwh)+' kWh × €'+fmt(FIN.elec,2)),'-'+eur(t.cost.elec))+
+    L('Operating cost',fmt(FIN.opexPct,1)+' % × '+cs(FIN.capex)+' M a year, '+(hrs<48?fmt(hrs,1)+' h':fmt(hrs/24,1)+' days'),'-'+eur(t.cost.opex))+
+    L('Electricity bought',(t.ownKwh<1?'none, the engines cover the plant':fmt(t.ownKwh)+' kWh × '+cs(FIN.elec,2)),'-'+eur(t.cost.elec))+
     L('<b>Operating costs</b>','','<b>-'+eur(t.C)+'</b>')+L('<b>EBITDA</b>','','<b class="'+(t.E>=0?'pos':'neg')+'">'+eur(t.E)+'</b>')+'</table>';
 }
 PAGES.finance={title:'Finance',period:true,render:renderFinance,csv:()=>{const f=finData();const rows=metaRows([['Report','Profit and loss'],['Period',D.P.label+' ('+D.P.range+')'],['Natural gas price EUR/MMBtu',FIN.ng],['Syngas discount %',FIN.disc],['Syngas price EUR/MMBtu',r1(gasPrice(),2)],['MMBtu per 1000 Nm3',FIN.mmbtu],['Gate fee EUR/t',FIN.gate],['Electricity bought EUR/kWh',FIN.elec],['Project cost EUR million',FIN.capex],['Operating cost % of project cost a year',FIN.opexPct],['Credit price EUR/tCO2e',cfg.price]]);
@@ -147,7 +147,7 @@ function renderWhatif(){
     <div class="grid2"><div class="card"><h3>Scenario</h3><div id="wiS"></div><div class="mact"><button class="btn" id="wiReset">Reset to current plant</button><button class="btn pri" id="wiSave">Save scenario</button></div></div>
     <div class="stack"><div class="card"><h3>Payback</h3><div class="payback" id="wiPay"></div><div class="muted" id="wiPayS"></div></div>
     <div class="card"><h3>One year <span>compared with the current plant settings</span></h3><div class="bigres" id="wiR"></div></div>
-    <div class="card"><h3>Cumulative cash over 15 years <span>EUR million, before financing and tax</span></h3><canvas id="c_wi"></canvas><div class="legend"></div></div></div></div>
+    <div class="card"><h3>Cumulative cash over 15 years <span><span class="curc">EUR</span> million, before financing and tax</span></h3><canvas id="c_wi"></canvas><div class="legend"></div></div></div></div>
     <div class="card mt"><h3>Saved scenarios</h3><div class="scrollx" id="wiList"></div></div>`)){
     $('#wiS').innerHTML=WI_SL.map(s=>`<div class="sl"><label for="wi_${s[0]}">${s[1]} <span class="muted">${s[2]}</span></label><output id="wo_${s[0]}"></output><input type="range" id="wi_${s[0]}" data-k="${s[0]}" min="${s[3]}" max="${s[4]}" step="${s[5]}"></div>`).join('');
     $('#wiS').addEventListener('input',e=>{const k=e.target.dataset.k;if(!k)return;WI[k]=parseFloat(e.target.value);lsSet('wtg_wi6',WI);renderWhatif();});
@@ -160,11 +160,11 @@ function renderWhatif(){
   const m=wiModel(WI),b=wiModel(wiBase());
   const dl=(v,bv,f)=>{const d=v-bv;return Math.abs(d)<1e-9?'<small>same as now</small>':'<small class="'+(d>0?'pos':'neg')+'">'+(d>0?'+':'-')+f(Math.abs(d))+' vs now</small>';};
   $('#wiPay').innerHTML=isFinite(m.payback)?fmt(m.payback,1)+'<small>years</small>':'Never<small>EBITDA is negative</small>';
-  $('#wiPayS').textContent='EUR '+fmt(WI.capex)+' million project cost divided by '+eurK(m.E)+' EBITDA a year. Syngas sells at €'+fmt(m.price,2)+' per MMBtu, and the factory saves '+eurK(m.save)+' a year.';
+  $('#wiPayS').textContent=cs(WI.capex)+' million project cost divided by '+eurK(m.E)+' EBITDA a year. Syngas sells at '+cs(m.price,2)+' per MMBtu, and the factory saves '+eurK(m.save)+' a year.';
   const R=[['Sold to the factory',fmt(m.sold/1e3)+' k MMBtu',m.sold,b.sold,v=>fmt(v/1e3)+' k MMBtu'],['Electricity exported',fmt(m.expKwh/1e6,1)+' GWh',m.expKwh,b.expKwh,v=>fmt(v/1e6,1)+' GWh'],['Natural gas replaced',fmt(m.ng/1e6,1)+' M Nm³',m.ng,b.ng,v=>fmt(v/1e6,1)+' M Nm³'],['Net carbon credits',fmt(m.cr)+' tCO2e',m.cr,b.cr,v=>fmt(v)+' t'],
     ['Revenue',eurK(m.R),m.R,b.R,eurK],['Operating costs',eurK(m.C),m.C,b.C,eurK],['EBITDA',eurK(m.E),m.E,b.E,eurK]];
   $('#wiR').innerHTML=R.map(r=>`<div><span>${r[0]}</span><b>${r[1]}</b>${dl(r[2],r[3],r[4])}</div>`).join('');
-  const yrs=[...Array(16).keys()],cum=yrs.map(y=>(-WI.capex*1e6+m.E*y)/1e6),cumB=yrs.map(y=>(-wiBase().capex*1e6+b.E*y)/1e6);
+  const yrs=[...Array(16).keys()],cum=yrs.map(y=>(-WI.capex*1e6+m.E*y)/1e6*curRate()),cumB=yrs.map(y=>(-wiBase().capex*1e6+b.E*y)/1e6*curRate());
   drawChart($('#c_wi'),{labels:yrs.map(y=>'Year '+y),series:[{name:'This scenario',color:'#d9c46a',type:'line',data:cum,dec:1},{name:'Current plant',color:'#5d6a77',type:'line',data:cumB,dec:1}],limits:[{v:0,color:'#8a97a4',label:'break-even'}]});
   const L=lsGet('wtg_wi_list',[]);
   $('#wiList').innerHTML=L.length?'<table><tr><th>Name</th><th class="r">t/day</th><th class="r">Days</th><th class="r">H₂ %</th><th class="r">Gas price</th><th class="r">Discount</th><th class="r">Gate fee</th><th class="r">EBITDA a year</th><th class="r">Payback</th><th></th></tr>'+L.map((s,i)=>{const r=wiModel(s.x);return `<tr><td>${esch(s.name)}</td><td class="r">${fmt(s.x.tpd)}</td><td class="r">${s.x.days}</td><td class="r">${fmt(s.x.h2,1)}</td><td class="r">${fmt(s.x.ng)}</td><td class="r">${fmt(s.x.disc)} %</td><td class="r">${fmt(s.x.gate)}</td><td class="r">${eurK(r.E)}</td><td class="r">${isFinite(r.payback)?fmt(r.payback,1)+' years':'never'}</td><td class="r nw"><button class="btn sm" data-a="load" data-i="${i}">Load</button> <button class="btn sm" data-a="del" data-i="${i}">Delete</button></td></tr>`;}).join('')+'</table>':'<div class="empty">Save a scenario to compare it here.</div>';
@@ -190,10 +190,10 @@ function renderGrid(){
   const {P,bk}=D,sp=split(D.total),price=gasPrice(),hrs=D.total.h||1;
   const dayDem=demandMMh()*24,daySup=TPD*FIN.mmbtu,match=dayDem/FIN.mmbtu;
   renderKpis($('#grK'),[
-    {l:'Sold to the factory',u:'MMBtu',v:sp.sold,d:0,s:'€'+fmt(sp.sold*price)+' at €'+fmt(price,2),c:'var(--gas)'},
+    {l:'Sold to the factory',u:'MMBtu',v:sp.sold,d:0,s:''+cs(sp.sold*price)+' at '+cs(price,2),c:'var(--gas)'},
     ...(FAC.eng?[{l:'Gas to the engines',u:'MMBtu',v:sp.engFuel,d:0,s:HYB.engines+' × J620, '+fmt(sp.engKwh)+' kWh made',c:'var(--power)'},
-    {l:'Electricity exported',u:'kWh',v:sp.expKwh,d:0,s:'€'+fmt(sp.expKwh*FAC.elecSell)+' at €'+fmt(FAC.elecSell,2)+', after '+fmt(sp.ownKwh-sp.buyKwh)+' kWh own use',c:'var(--power)'}]:[]),
-    {l:'Factory saving',u:'EUR',v:sp.sold*refPrice()*FIN.disc/100,d:0,s:'against €'+fmt(refPrice(),2)+' per MMBtu '+fuelName()},
+    {l:'Electricity exported',u:'kWh',v:sp.expKwh,d:0,s:''+cs(sp.expKwh*FAC.elecSell)+' at '+cs(FAC.elecSell,2)+', after '+fmt(sp.ownKwh-sp.buyKwh)+' kWh own use',c:'var(--power)'}]:[]),
+    {l:'Factory saving',u:'EUR',v:sp.sold*refPrice()*FIN.disc/100,d:0,s:'against '+cs(refPrice(),2)+' per MMBtu '+fuelName()},
     {l:'Gas not used',u:'MMBtu',v:sp.sur,d:0,s:sp.sur>0.5?(FAC.eng?'engines full':'no buyer yet, engines not built'):'none',c:sp.sur>0.5?'var(--amber)':'var(--line2)'}]);
   $('#grU').textContent='MMBtu '+UNIT_PER[state.mode];$('#grP').textContent='('+P.label.toLowerCase()+')';$('#grDs').textContent='MMBtu a day';
   const sps=bk.map(b=>b.acc?split(b.acc):null);
@@ -203,7 +203,7 @@ function renderGrid(){
   $('#grDem').innerHTML='<table>'+L('Plant supply, running day',fmt(TPD)+' t waste × '+fmt(FIN.mmbtu,1)+' MMBtu',fmt(daySup)+' MMBtu')+L('Furnace takes',fmt(FAC.glass)+' t glass × '+fmt(FAC.gj,1)+' GJ × '+fmt(FAC.blend)+' %',fmt(Math.min(dayDem,daySup))+' MMBtu')+
     (FAC.eng?L('<b>Surplus to the engines</b>','','<b>'+fmt(surDay)+' MMBtu</b>')+L('Electricity made',fmt(HYB.eff*100)+' % efficiency',fmt(engKwhDay/1000,1)+' MWh')+L('Plant own use','',fmt(165*S()*24/1000,1)+' MWh')+L('<b>Exported</b>','','<b>'+fmt(Math.max(0,engKwhDay-165*S()*24)/1000,1)+' MWh</b>'):L('<b>Surplus, not sold</b>','','<b>'+fmt(surDay)+' MMBtu</b>')+L('Share of the gas not sold','',fmt(daySup?surDay/daySup*100:0)+' %'))+'</table>'+
     `<div class="note">${FAC.eng?HYB.engines+' × INNIO Jenbacher J620 (3 MW each) burn the surplus.':'The engines are not built yet, so the surplus has no buyer: revenue counts only the gas the furnace takes. Switch them on below to see the hybrid case.'} To sell all the gas to the furnace, the plant would process about <b>${fmt(match)} t of waste a day</b>. Energy per tonne of glass is a typical value for container glass: use the factory's meter readings.</div>`;
-  $('#grT').innerHTML='<table>'+L((FAC.fuel==='bio'?'Biomethane':'Natural gas')+' price (replaced)','','€'+fmt(refPrice(),2)+' per MMBtu')+L('Discount','',fmt(FIN.disc)+' %')+L('<b>Syngas price</b>','','<b>€'+fmt(price,2)+' per MMBtu</b>')+L('Sold to the factory',fmt(sp.sold)+' MMBtu × €'+fmt(price,2),eur(sp.sold*price))+(FAC.eng?L('Electricity exported',fmt(sp.expKwh)+' kWh × €'+fmt(FAC.elecSell,2),eur(sp.expKwh*FAC.elecSell))+L('Electricity not bought',fmt(sp.ownKwh-sp.buyKwh)+' kWh × €'+fmt(FIN.elec,2),eur((sp.ownKwh-sp.buyKwh)*FIN.elec)):'')+L('<b>Factory saving</b>',fmt(sp.sold)+' MMBtu × €'+fmt(FIN.ng*FIN.disc/100,2),'<b class="pos">'+eur(sp.sold*refPrice()*FIN.disc/100)+'</b>')+'</table>'+
+  $('#grT').innerHTML='<table>'+L((FAC.fuel==='bio'?'Biomethane':'Natural gas')+' price (replaced)','',''+cs(refPrice(),2)+' per MMBtu')+L('Discount','',fmt(FIN.disc)+' %')+L('<b>Syngas price</b>','','<b>'+cs(price,2)+' per MMBtu</b>')+L('Sold to the factory',fmt(sp.sold)+' MMBtu × '+cs(price,2),eur(sp.sold*price))+(FAC.eng?L('Electricity exported',fmt(sp.expKwh)+' kWh × '+cs(FAC.elecSell,2),eur(sp.expKwh*FAC.elecSell))+L('Electricity not bought',fmt(sp.ownKwh-sp.buyKwh)+' kWh × '+cs(FIN.elec,2),eur((sp.ownKwh-sp.buyKwh)*FIN.elec)):'')+L('<b>Factory saving</b>',fmt(sp.sold)+' MMBtu × '+cs(FIN.ng*FIN.disc/100,2),'<b class="pos">'+eur(sp.sold*refPrice()*FIN.disc/100)+'</b>')+'</table>'+
     '<div class="note">'+(FAC.fuel==='bio'?'Biomethane price: the Italian incentive tariff of €124.48 per MWh for plants above 100 Sm³/h (€36.48 per MMBtu). What the factory actually pays for biomethane and its guarantees of origin may differ: use its contract price. Replacing biomethane earns no fuel-switch credit, because biomethane is already counted as renewable; credits come from landfill avoidance and the engine power.':'Natural gas price: EU gas at €73.32 per MWh on 2 Oct 2026 (Trading Economics), which is €21.5 per MMBtu. Use the price the factory actually pays, delivered, which is usually higher.')+'</div>';
 }
 PAGES.grid={title:'Gas sales',period:true,render:renderGrid,csv:()=>{const {P,bk}=D;const rows=metaRows([['Report','Gas sales to the bottle factory'],['Period',P.label+' ('+P.range+')'],['Natural gas price EUR/MMBtu',FIN.ng],['Discount %',FIN.disc],['Syngas price EUR/MMBtu',r1(gasPrice(),2)],['MMBtu per 1000 Nm3',FIN.mmbtu],['Factory output t glass/day',FAC.glass],['Furnace GJ per t glass',FAC.gj],['Syngas share limit %',FAC.blend],['Engines',HYB.engines+' x J620'],['Electricity export price EUR/kWh',FAC.elecSell]]);rows.push(['Period','Syngas Nm3','Produced MMBtu','Sold to factory MMBtu','To engines MMBtu','Not used MMBtu','Electricity made kWh','Exported kWh','Syngas sales EUR','Electricity sales EUR','Factory saving EUR']);bk.forEach(b=>{if(!b.acc)return;const x=split(b.acc);rows.push([tsf(b.t),r1(b.acc.s.toGen,0),r1(x.mm,1),r1(x.sold,1),r1(x.engFuel,1),r1(x.sur,1),r1(x.engKwh,0),r1(x.expKwh,0),r1(x.sold*gasPrice(),0),r1(x.expKwh*FAC.elecSell,0),r1(x.sold*refPrice()*FIN.disc/100,0)]);});return {name:'gas-sales_'+fileTag()+'_'+slug(P.label)+'.csv',text:csvText(rows)};}};

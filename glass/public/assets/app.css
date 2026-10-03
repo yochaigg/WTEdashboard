@@ -48,9 +48,9 @@ button{font-family:inherit}
 #plabel{color:var(--muted);font-size:13px;font-weight:400;white-space:normal}
 .top .sp{flex:1}
 #hamb{display:none;background:none;border:1px solid var(--line);color:var(--text);border-radius:8px;width:38px;height:38px;cursor:pointer;align-items:center;justify-content:center}
-#modes{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:2px;gap:2px}
-#modes button{background:none;border:0;color:var(--muted);padding:6px 13px;border-radius:7px}
-#modes button.on{background:var(--teal);color:var(--bg);font-weight:600;border:0}
+#modes,#curSel{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:2px;gap:2px}
+#modes button,#curSel button{background:none;border:0;color:var(--muted);padding:6px 13px;border-radius:7px}
+#modes button.on,#curSel button.on{background:var(--teal);color:var(--bg);font-weight:600;border:0}
 .tpd{color:var(--muted)}
 .tpd input{border-color:var(--line2);box-shadow:none;font-family:var(--num);font-size:15px;width:76px}
 #clock{font-family:var(--num);font-size:14px}
@@ -267,3 +267,4 @@ canvas.tall{height:260px}
 .form input.ro{opacity:.75;cursor:default}
 .pstat{grid-column:1/-1;color:var(--muted);font-size:12px;margin-top:-2px}
 .pstat.bad{color:var(--amber)}
+#curSel{display:flex}#curSel button{padding:6px 10px}#curSel button:disabled{opacity:.4;cursor:not-allowed}

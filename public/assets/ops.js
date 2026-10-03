@@ -3,8 +3,8 @@
 
 /* ---------- shared helpers ---------- */
 const esch=s=>escH(s);
-const eur=(v,d=0)=>(v<0?'-':'')+'€'+fmt(Math.abs(v),d);
-const eurK=v=>Math.abs(v)>=1e6?(v<0?'-':'')+'€'+fmt(Math.abs(v)/1e6,2)+' M':Math.abs(v)>=1e4?(v<0?'-':'')+'€'+fmt(Math.abs(v)/1e3,0)+' k':eur(v);
+const eur=(v,d=0)=>cs(v,d);   /* shown in the selected currency */
+const eurK=v=>{const x=v*curRate(),y=Math.abs(x),sg=v<0?'-':'',sy=CURS[curCode()];return y>=1e6?sg+sy+fmt(y/1e6,2)+' M':y>=1e4?sg+sy+fmt(y/1e3,0)+' k':eur(v);};
 function alertsBetween(t0,t1){const out=[];for(let d=dayInfo(t0).start;d<t1;d=dayInfo(d+30*HOUR).start)alertsOfDay(d).forEach(a=>{if(a.start<t1&&(a.end==null||a.end>t0))out.push(a);});return out;}
 function nextShutdown(from){let d=dayInfo(from).start;for(let i=0;i<400;i++){const di=dayInfo(d);if(isShutdown(di.ord)&&di.end>from)return di;d=dayInfo(d+30*HOUR).start;}return null;}
 function prevShutdown(from){let d=dayInfo(from).start;for(let i=0;i<400;i++){const di=dayInfo(d);if(isShutdown(di.ord)&&di.start<=from)return di;d=dayInfo(d-18*HOUR).start;}return null;}

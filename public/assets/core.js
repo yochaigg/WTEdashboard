@@ -18,6 +18,13 @@ function pageOf(h){const m=/^#\/([\w-]+)/.exec(h||'');const id=m?m[1]:'plant';re
 const state={mode:'live',anchor:new Date(),screen:'plant'};
 let acked=new Set(lsGet('wte_ack',[]));
 const cfg=Object.assign({land:0.5,disp:0.70,fossil:30,price:70},lsGet('wte_carbon2',{}));
+/* display currency: inputs stay in EUR, everything shown on screen is converted at the latest rate.
+   CSV files and audit packages stay in EUR. */
+const CURS={EUR:'€',USD:'$',GBP:'£'};
+const CUR=Object.assign({code:'EUR',rates:{EUR:1},date:'',src:''},lsGet('wte_cur',{}));
+const curCode=()=>CUR.rates[CUR.code]>0?CUR.code:'EUR';
+const curRate=()=>CUR.rates[curCode()]||1;
+const cs=(v,d=0)=>(v<0?'-':'')+CURS[curCode()]+fmt(Math.abs(v)*curRate(),d);
 
 /* ---------- charts ---------- */
 const axisFmt=(v,step)=>{const d=step>=1?0:step>=0.1?1:2;return v.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});};
@@ -136,6 +143,7 @@ function kpiColor(l,v){l=l.toLowerCase();
 function renderKpis(host,list){
   if(host._n!==list.length){host.innerHTML=list.map(()=>'<div class="kpi"><div class="l"></div><div class="v"><b></b><small></small></div><div class="s"></div></div>').join('');host._h=null;host._n=list.length;}
   list.forEach((k,i)=>{
+    if(typeof k.u==='string'&&/^EUR\b/.test(k.u)&&curCode()!=='EUR')k={...k,v:k.v*curRate(),u:k.u.replace(/^EUR/,curCode())};
     const el=host.children[i],b=el.querySelector('b'),txt=fmtB(k.v,k.d);
     el.style.setProperty('--kc',k.c||kpiColor(k.l,k.v));el.querySelector('.l').textContent=k.l;el.querySelector('small').textContent=k.u;el.querySelector('.s').textContent=k.s;
     if(b.textContent!==txt){const had=b.textContent!==''&&!k.nf;b.textContent=txt;if(had){b.classList.remove('flash');void b.offsetWidth;b.classList.add('flash');}}
@@ -234,7 +242,7 @@ function credits(a){
 }
 function renderCarbon(){
   const {P,total,bk,ytd}=D,c=credits(total),y=credits(ytd);
-  const K=[['Net credits','tCO2e',c.net,1,P.label],['9.1 Landfill avoidance','tCO2e',c.land,1,fmt(c.waste,1)+' t waste diverted'],['9.2 Fossil fuel replaced','tCO2e',c.disp,1,fmt(c.mwh,1)+' MWh clean power'],['Project emissions deducted','tCO2e',-c.ded,1,cfg.fossil+' % of '+fmt(c.co2t,1)+' t generator CO₂'],['Estimated value','EUR',c.net*cfg.price,0,'at '+fmt(cfg.price,2)+' EUR per tCO2e'],['Year to date net','tCO2e',y.net,1,fmt(y.waste,0)+' t waste, '+fmt(y.mwh,0)+' MWh']];
+  const K=[['Net credits','tCO2e',c.net,1,P.label],['9.1 Landfill avoidance','tCO2e',c.land,1,fmt(c.waste,1)+' t waste diverted'],['9.2 Fossil fuel replaced','tCO2e',c.disp,1,fmt(c.mwh,1)+' MWh clean power'],['Project emissions deducted','tCO2e',-c.ded,1,cfg.fossil+' % of '+fmt(c.co2t,1)+' t generator CO₂'],['Estimated value','EUR',c.net*cfg.price,0,'at '+cs(cfg.price,2)+' per tCO2e'],['Year to date net','tCO2e',y.net,1,fmt(y.waste,0)+' t waste, '+fmt(y.mwh,0)+' MWh']];
   renderKpis($('#ckpis'),K.map(k=>({l:k[0],u:k[1],v:k[2],d:k[3],s:k[4]})));
   const per=bk.map(b=>b.acc?credits(b.acc):null);let run=0;
   const cum=per.map(p=>{if(!p)return null;run+=p.net;return run;});
@@ -249,7 +257,7 @@ function renderCarbon(){
     ['Clean power',fmt(c.mwh,1)+' MWh × '+fmt(cfg.disp,2)+' kg/kWh','= '+fmt(c.disp,1)+' tCO2e'],
     ['Generator CO₂',fmt(c.co2t,1)+' t × '+cfg.fossil+' % fossil','= -'+fmt(c.ded,1)+' tCO2e'],
     ['<b>Net credits</b>','','<b>'+fmt(c.net,1)+' tCO2e</b>'],
-    ['Value',fmt(c.net,1)+' × '+fmt(cfg.price,2)+' EUR','= '+fmt(c.net*cfg.price)+' EUR']
+    ['Value',fmt(c.net,1)+' × '+cs(cfg.price,2),'= '+cs(c.net*cfg.price)]
   ].map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td class="r">${r[2]}</td></tr>`).join('')+'</table>';
 }
 
@@ -320,6 +328,20 @@ async function pmFetch(){
 $('#fPriceMode').addEventListener('click',e=>{const v=e.target.dataset&&e.target.dataset.v;if(!v||v===cfg.priceMode)return;cfg.priceMode=v;if(v==='manual'&&cfg.manualPrice!=null){cfg.price=cfg.manualPrice;tick(true);}lsSet('wte_carbon2',cfg);if(typeof addOp==='function')addOp('Credit price set to '+(v==='auto'?'automatic':'manual'));pmPaint();if(v==='auto')pmFetch();});
 F.price.addEventListener('input',()=>{if(cfg.priceMode==='auto'){F.price.value=cfg.price;}});
 pmPaint();pmFetch();setInterval(pmFetch,6*3600*1000);
+/* currency toggle */
+function curPaint(){
+  const code=curCode();
+  $('#curSel').querySelectorAll('button').forEach(b=>{const v=b.dataset.c,ok=v==='EUR'||CUR.rates[v]>0;b.classList.toggle('on',v===code);b.setAttribute('aria-pressed',v===code);b.disabled=!ok;
+    b.title=v==='EUR'?'Euro, the currency the plant reports in':ok?`1 EUR = ${fmt(CUR.rates[v],4)} ${v}, ${CUR.src||'market rate'}${CUR.date?' of '+fd(Date.parse(CUR.date)):''}`:'Exchange rate not available yet';});
+  document.querySelectorAll('.curc').forEach(e=>e.textContent=code);
+}
+async function curFetch(){
+  try{const r=await fetch('/api/fx',{cache:'no-store'});const j=await r.json();if(!j.ok)throw new Error(j.error);
+    CUR.rates=j.rates;CUR.date=j.date;CUR.src=j.source;lsSet('wte_cur',CUR);tick(true);}catch(e){}
+  curPaint();
+}
+$('#curSel').addEventListener('click',e=>{const b=e.target.closest('button[data-c]');if(!b||b.disabled)return;CUR.code=b.dataset.c;lsSet('wte_cur',CUR);curPaint();tick(true);});
+curPaint();curFetch();setInterval(curFetch,6*3600*1000);
 
 /* ---------- CSV export and data package ---------- */
 let DATA_SOURCE='SIMULATED';   /* change to 'MEASURED' when real plant data is connected */
@@ -570,7 +592,7 @@ function renderAnalysis(){
     {l:'Power change',u:'%',v:R.kw.rel*100,d:0,s:'at the worst point'},
     {l:'Energy not generated',u:'MWh',v:I.lostKwh/1000,d:2,s:fmt(I.briqLostKg/1000,2)+' t briquets not fed'},
     {l:'Credits not earned',u:'tCO2e',v:cr,d:1,s:'fossil replacement part'},
-    {l:'Value',u:'EUR',v:cr*cfg.price,d:0,s:'at '+fmt(cfg.price,2)+' EUR per tCO2e'}
+    {l:'Value',u:'EUR',v:cr*cfg.price,d:0,s:'at '+cs(cfg.price,2)+' per tCO2e'}
   ]);
   drawChart($('#anaChart'),{labels:r.labels,series:r.series,limits:[{v:100,color:'#7f93a8',label:'normal level'}],bands:[{i0:r.i0,i1:r.i1,color:'rgba(239,91,91,.16)'}]});
   const L=[];
@@ -578,7 +600,7 @@ function renderAnalysis(){
   else if(R.kw.moved)L.push('Power changed by '+sgn(R.kw.rel*100,0)+' % (lowest '+fmt(I.kwMin)+' kW against a normal '+fmt(I.kwBase)+' kW).');
   else L.push('Power stayed within its normal range in this window.');
   if(r.mv.length)L.push('Parameters that moved, earliest first: '+r.mv.slice(0,5).map(x=>x.label+' ('+(Math.abs(x.rel)<5?sgn(x.rel*100,0)+' %':sgn(x.change,x.dec)+' '+x.unit)+', '+onsetTxt(x)+')').join('; ')+'.');
-  if(I.lostKwh>1)L.push('About '+fmt(I.lostKwh)+' kWh was not generated, which is '+fmt(cr,1)+' tCO2e of fossil replacement credits not earned ('+fmt(cr*cfg.price)+' EUR).');
+  if(I.lostKwh>1)L.push('About '+fmt(I.lostKwh)+' kWh was not generated, which is '+fmt(cr,1)+' tCO2e of fossil replacement credits not earned ('+cs(cr*cfg.price)+').');
   r.hints.forEach(x=>L.push(x));
   $('#anaText').innerHTML='<ul>'+L.map(x=>'<li>'+escH(x)+'</li>').join('')+'</ul><div class="note">Hints are pattern based and use simulated data. They show where to look, they are not a diagnosis.</div>';
   $('#anaTable').innerHTML='<table><tr><th>Parameter</th><th class="r">Normal</th><th class="r">At worst</th><th class="r">Change</th><th class="r">Starts moving</th></tr>'+[...r.mv,...r.still].map(x=>'<tr class="'+(x.moved?'':'dim')+'"><td>'+x.label+'</td><td class="r">'+fmt(x.base,x.dec)+' '+x.unit+'</td><td class="r">'+fmt(x.ext,x.dec)+' '+x.unit+'</td><td class="r">'+(x.moved?sgn(x.change,x.dec)+' '+x.unit+' ('+sgn(x.rel*100,0)+' %)':'no change')+'</td><td class="r">'+(x.moved?onsetTxt(x):'-')+'</td></tr>').join('')+'</table>';
