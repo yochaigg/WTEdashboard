@@ -1,5 +1,6 @@
 {
   "name": "wtedashboard",
   "compatibility_date": "2025-09-01",
-  "assets": { "directory": "./public" }
+  "main": "worker/index.js",
+  "assets": { "directory": "./public", "binding": "ASSETS" }
 }

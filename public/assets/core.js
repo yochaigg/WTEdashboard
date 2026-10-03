@@ -291,10 +291,35 @@ makeCards($('#mainCharts'),MAIN_CARDS);makeCards($('#carbonCharts'),CARBON_CARDS
 const F={land:$('#fLand'),disp:$('#fDisp'),fossil:$('#fFossil'),price:$('#fPrice')};
 function syncForm(){F.land.value=cfg.land;F.disp.value=cfg.disp;F.fossil.value=cfg.fossil;F.price.value=cfg.price;
   const sel=$('#fPreset');sel.value=[...sel.options].some(o=>o.value&&+o.value===+cfg.disp)?String(cfg.disp.toFixed(2)):'';}
-Object.keys(F).forEach(k=>F[k].addEventListener('input',()=>{const v=parseFloat(F[k].value);cfg[k]=isNaN(v)?0:v;lsSet('wte_carbon2',cfg);if(k==='disp')syncPreset();tick(true);}));
+Object.keys(F).forEach(k=>F[k].addEventListener('input',()=>{if(k==='price'&&cfg.priceMode==='auto')return;const v=parseFloat(F[k].value);cfg[k]=isNaN(v)?0:v;if(k==='price')cfg.manualPrice=cfg.price;lsSet('wte_carbon2',cfg);if(k==='disp')syncPreset();tick(true);}));
 function syncPreset(){const sel=$('#fPreset');sel.value=[...sel.options].some(o=>o.value&&+o.value===+cfg.disp)?[...sel.options].find(o=>o.value&&+o.value===+cfg.disp).value:'';}
 $('#fPreset').addEventListener('change',e=>{if(e.target.value){cfg.disp=parseFloat(e.target.value);F.disp.value=cfg.disp;lsSet('wte_carbon2',cfg);tick(true);}});
 syncForm();syncPreset();
+/* credit price: automatic (EU ETS market price from the plant server) or manual */
+if(!cfg.priceMode)cfg.priceMode='auto';
+const PM={busy:false,err:''};
+function pmPaint(){
+  $('#fPriceMode').querySelectorAll('button').forEach(b=>{const on=b.dataset.v===cfg.priceMode;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on);});
+  const auto=cfg.priceMode==='auto';F.price.readOnly=auto;F.price.classList.toggle('ro',auto);F.price.value=cfg.price;
+  let t;
+  if(!auto)t='Manual price, typed in.';
+  else if(PM.busy)t='Getting the latest market price...';
+  else if(cfg.autoAt&&!PM.err)t=`EU ETS allowance (EUA), ${cfg.autoBasis||'latest'}. Source ${cfg.autoSrc||'SendeCO2'}, checked ${fd(cfg.autoAt)} ${hhmm(cfg.autoAt)}.`;
+  else if(cfg.autoAt)t=`Couldn't reach the price feed (${PM.err}). Using the last market price from ${fd(cfg.autoAt)}.`;
+  else t=`Couldn't reach the price feed${PM.err?' ('+PM.err+')':''}. Using ${fmt(cfg.price,2)} EUR until it answers.`;
+  $('#fPriceStat').textContent=t;$('#fPriceStat').classList.toggle('bad',auto&&!!PM.err);
+}
+async function pmFetch(){
+  if(cfg.priceMode!=='auto')return;PM.busy=true;pmPaint();
+  try{const r=await fetch('/api/carbon-price',{cache:'no-store'});const j=await r.json().catch(()=>({ok:false,error:'no price service on this address'}));
+    if(!j.ok)throw new Error(j.error||('error '+r.status));
+    cfg.price=Math.round(j.price*100)/100;cfg.autoAt=Date.parse(j.fetchedAt)||Date.now();cfg.autoBasis=j.basis;cfg.autoSrc=j.source;PM.err='';lsSet('wte_carbon2',cfg);tick(true);
+  }catch(e){PM.err=String(e.message||e).replace(/^TypeError: /,'');}
+  PM.busy=false;pmPaint();
+}
+$('#fPriceMode').addEventListener('click',e=>{const v=e.target.dataset&&e.target.dataset.v;if(!v||v===cfg.priceMode)return;cfg.priceMode=v;if(v==='manual'&&cfg.manualPrice!=null){cfg.price=cfg.manualPrice;tick(true);}lsSet('wte_carbon2',cfg);if(typeof addOp==='function')addOp('Credit price set to '+(v==='auto'?'automatic':'manual'));pmPaint();if(v==='auto')pmFetch();});
+F.price.addEventListener('input',()=>{if(cfg.priceMode==='auto'){F.price.value=cfg.price;}});
+pmPaint();pmFetch();setInterval(pmFetch,6*3600*1000);
 
 /* ---------- CSV export and data package ---------- */
 let DATA_SOURCE='SIMULATED';   /* change to 'MEASURED' when real plant data is connected */
@@ -336,7 +361,7 @@ function pkgData(sel){
 function carbonCsv(pk,who,fac){
   const head=['Period start','Waste diverted (t)','Trucks','Clean power (MWh)','Generator CO2 (t)','Landfill avoidance (tCO2e)','Fossil fuel replaced (tCO2e)','Project emissions deducted (tCO2e)','Net credits (tCO2e)','Indicative value (EUR)'];
   const line=(l,a)=>{const c=credits(a);return [l,r1(c.waste,2),a.s.trucks,r1(c.mwh,2),r1(c.co2t,2),r1(c.land,2),r1(c.disp,2),r1(c.ded,2),r1(c.net,2),r1(c.net*cfg.price,0)];};
-  const rows=metaRows([['Purpose','Carbon credit data package'],['Facility',fac||''],['Methodology',PK.meth||''],['Project reference',PK.pid||''],['Prepared for',who||''],['Period',pk.label+' ('+pk.range+')'],['Row size',pk.unit],['Landfill avoidance factor (tCO2e per t waste)',cfg.land],['Fossil displacement factor (kg CO2 per kWh)',cfg.disp],['Fossil share of generator CO2 (%)',cfg.fossil],['Credit price (EUR per tCO2e)',cfg.price],['Factor status','Placeholder factors, confirm against the methodology before submission']]);
+  const rows=metaRows([['Purpose','Carbon credit data package'],['Facility',fac||''],['Methodology',PK.meth||''],['Project reference',PK.pid||''],['Prepared for',who||''],['Period',pk.label+' ('+pk.range+')'],['Row size',pk.unit],['Landfill avoidance factor (tCO2e per t waste)',cfg.land],['Fossil displacement factor (kg CO2 per kWh)',cfg.disp],['Fossil share of generator CO2 (%)',cfg.fossil],['Credit price (EUR per tCO2e)',cfg.price],['Credit price source',cfg.priceMode==='auto'?'Automatic: EU ETS allowance (EUA), '+(cfg.autoBasis||'')+', '+(cfg.autoSrc||'SendeCO2'):'Manual'],['Factor status','Placeholder factors, confirm against the methodology before submission']]);
   rows.push(head);pk.rows.forEach(r=>rows.push(line(tsf(r.t),r.acc)));
   rows.push(line('TOTAL',pk.total));
   return {name:'carbon-credit-data_'+fileTag()+'_'+slug(pk.label)+'.csv',text:csvText(rows)};

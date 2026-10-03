@@ -19,7 +19,7 @@ function applyRole(){
   const r=role(),nm=USER&&USER.name?USER.name:r.label;
   $('#whoName').textContent=nm;$('#whoRole').textContent=USER?r.label:'Choose a role';$('#whoInit').textContent=(nm||'?').trim().charAt(0).toUpperCase();
   $('#btnPkg').hidden=!can('audit');
-  document.querySelectorAll('#screenCarbon input,#screenCarbon select,[data-page="carbon"] .form input,[data-page="carbon"] .form select').forEach(i=>i.disabled=!can('edit'));
+  document.querySelectorAll('#screenCarbon input,#screenCarbon select,[data-page="carbon"] .form input,[data-page="carbon"] .form select,#fPriceMode button').forEach(i=>i.disabled=!can('edit'));
   $('#tpd').disabled=!can('edit');
   document.querySelectorAll('section.page [id^="pg_"]').forEach(el=>{el._built=false;});
 }
