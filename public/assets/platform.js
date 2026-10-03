@@ -141,7 +141,7 @@ function renderSites(){
   <div class="legend">${stages.map(st=>`<span><i style="background:${scol[st]}"></i>${st} ${fmt(SITES.filter(s=>s.stage===st).reduce((a,s)=>a+tpdOf(s),0))} t/day</span>`).join('')}</div></div>
   <div class="sites mt">${SITES.map((s,i)=>{const x=stats.find(z=>z.s===s);const today=x?x.d[x.d.length-1]:null;
     return `<div class="site${s.self?' this':''}"><h3><span>${esch(s.name)}</span><span class="stage${s.stage==='Operating'?' op':''}">${s.stage}${s.cod&&s.stage!=='Operating'?', '+esch(s.cod):''}</span></h3><div class="muted">${esch(s.place)}, ${fmt(tpdOf(s))} t/day, ${fmt(mwOf(tpdOf(s)),1)} MW installed</div>
-    ${x?`<div class="row3"><div><span>Today, MWh</span><b>${fmt(today.mwh,1)}</b></div><div><span>Daily average, MWh</span><b>${fmt(x.d.reduce((a,z)=>a+z.mwh,0)/14,1)}</b></div><div><span>Credits a year, t</span><b>${fmt(x.y)}</b></div></div><canvas id="spark_${s.id}"></canvas>`:`<div class="muted">No production yet.</div>`}
+    ${x?`<div class="row3"><div><span>Today, MWh</span><b>${fmt(today.mwh,state.mode==='live'?3:1)}</b></div><div><span>Daily average, MWh</span><b>${fmt(x.d.reduce((a,z)=>a+z.mwh,0)/14,1)}</b></div><div><span>Credits a year, t</span><b>${fmt(x.y)}</b></div></div><canvas id="spark_${s.id}"></canvas>`:`<div class="muted">No production yet.</div>`}
     <div class="mact">${s.self?'<button class="btn sm" data-go="plant">Open plant</button>':''}${ed&&!s.self?`<button class="btn sm" data-ed="${i}">Edit</button><button class="btn sm" data-del="${i}">Remove</button>`:''}</div></div>`;}).join('')}</div>
   ${ed?'<div class="mact"><button class="btn" id="siAdd">Add a site</button><button class="btn" id="siReset">Reset the list</button></div>':''}
   <div class="card mt" id="siForm" hidden></div>`;

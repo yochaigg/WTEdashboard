@@ -95,7 +95,7 @@ function makeCards(host,list){
 const fd=t=>new Date(t).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
 function period(){
   const now=Date.now(),m=state.mode,nd=new Date(now);let t0,label,range;
-  if(m==='live'){t0=now-HOUR;label='Last hour';}
+  if(m==='live'){t0=dayInfo(now).start;label='Today so far';}
   else if(m==='day'){t0=Math.floor(now/HOUR)*HOUR-23*HOUR;label='Last 24 hours';}
   else if(m==='month'){t0=new Date(nd.getFullYear(),nd.getMonth(),nd.getDate()-29).getTime();label='Last 30 days';}
   else{t0=new Date(nd.getFullYear(),nd.getMonth()-11,1).getTime();label='Last 12 months';}
@@ -105,7 +105,9 @@ function period(){
 function getBuckets(P){
   const out=[],now=P.now,m=P.m;
   if(m==='live'){
-    for(let i=0;i<12;i++){const a=P.t0+i*5*MIN;out.push({t:a,label:hhmm(a),acc:integrate(a,Math.min(a+5*MIN,now))});}
+    /* live: running totals since midnight, in 30-minute bars; the last bar grows every second */
+    for(let a=P.t0;a<now;a+=30*MIN)out.push({t:a,label:hhmm(a),acc:integrate(a,Math.min(a+30*MIN,now))});
+    if(!out.length)out.push({t:P.t0,label:hhmm(P.t0),acc:integrate(P.t0,now)});
   }else if(m==='day'){
     for(let i=0;i<24;i++){const a=P.t0+i*HOUR;out.push({t:a,label:pad(new Date(a).getHours())+':00',acc:a<now?integrate(a,Math.min(a+HOUR,now)):null});}
   }else if(m==='month'){
@@ -130,7 +132,7 @@ function buildData(){
   for(let mo=0;mo<12;mo++){const a=monthAcc(y,mo,P.now);if(a)mergeAcc(ytd,a);}
   return {P,bk,total,snaps,cur,eps:alertCache.eps,ytd};
 }
-const UNIT_PER={live:'per 5 min',day:'per hour',month:'per day',year:'per month'};
+const UNIT_PER={live:'per 30 min',day:'per hour',month:'per day',year:'per month'};
 function kpiColor(l,v){l=l.toLowerCase();
   if(/alert/.test(l))return v>0?'var(--amber)':'var(--line2)';
   if(/credit|co2e|landfill|fossil|carbon/.test(l)&&!/generator/.test(l))return 'var(--carbon)';
@@ -144,6 +146,8 @@ function renderKpis(host,list){
   if(host._n!==list.length){host.innerHTML=list.map(()=>'<div class="kpi"><div class="l"></div><div class="v"><b></b><small></small></div><div class="s"></div></div>').join('');host._h=null;host._n=list.length;}
   list.forEach((k,i)=>{
     if(typeof k.u==='string'&&/^EUR\b/.test(k.u)&&curCode()!=='EUR')k={...k,v:k.v*curRate(),u:k.u.replace(/^EUR/,curCode())};
+    /* live: show running totals with enough decimals to tick every second, without flashing */
+    if(state.mode==='live'&&!/waste|truck|alert|site|year|\brate\b|per |price|efficien/i.test(k.l)){const ld={MWh:3,t:3,tCO2e:3,MMBtu:2,EUR:2,USD:2,GBP:2}[k.u];if(ld!=null&&Math.abs(k.v)<1e7&&k.d<ld)k={...k,d:ld,nf:true};}
     const el=host.children[i],b=el.querySelector('b'),txt=fmtB(k.v,k.d);
     el.style.setProperty('--kc',k.c||kpiColor(k.l,k.v));el.querySelector('.l').textContent=k.l;el.querySelector('small').textContent=k.u;el.querySelector('.s').textContent=k.s;
     if(b.textContent!==txt){const had=b.textContent!==''&&!k.nf;b.textContent=txt;if(had){b.classList.remove('flash');void b.offsetWidth;b.classList.add('flash');}}
@@ -253,7 +257,7 @@ function renderCarbon(){
   drawChart($('#c_cc2'),{labels,series:[{name:'Cumulative net',color:'#2dd4bf',type:'line',data:cum,dec:1}]});
   drawChart($('#c_cc3'),{labels,series:[{name:'Waste diverted (t)',color:'#4ade80',type:'bar',data:per.map(p=>p&&p.waste),dec:1}]});
   $('#cbLbl').textContent='('+P.label+')';
-  const cs=document.querySelectorAll('#carbonCharts .card h3 span');cs[0].textContent='tCO2e '+UNIT_PER[state.mode];cs[1].textContent='tCO2e, running total';cs[2].textContent='t '+UNIT_PER[state.mode];
+  const chs=document.querySelectorAll('#carbonCharts .card h3 span');chs[0].textContent='tCO2e '+UNIT_PER[state.mode];chs[1].textContent='tCO2e, running total';chs[2].textContent='t '+UNIT_PER[state.mode];
   $('#breakdown').innerHTML='<table>'+[
     ['Waste diverted',fmt(c.waste,1)+' t × '+fmt(cfg.land,2),'= '+fmt(c.land,1)+' tCO2e'],
     ['Natural gas replaced',fmt(c.mwh,1)+' MWh × '+fmt(cfg.disp,3)+' kg/kWh','= '+fmt(c.disp,1)+' tCO2e'],
