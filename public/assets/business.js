@@ -32,7 +32,7 @@ function elecStatus(){
   const c=NJ.data&&NJ.data.cents&&NJ.data.cents[FIN.njSector],v=njEur();
   if(NJ.busy&&!c)return 'Getting the New Jersey price...';
   if(!c)return `Couldn't reach the price feed${NJ.err?' ('+NJ.err+')':''}. Using ${cs(FIN.peak,2)} per MWh until it answers.`;
-  return `New Jersey average, ${NJ_LBL[FIN.njSector]}: ${fmt(c,2)} US cents per kWh (${NJ.data.month||'latest month'}, U.S. EIA).`+(v!=null?` At 1 EUR = ${fmt(CUR.rates.USD,4)} USD that is €${fmt(v,2)} per MWh.`:'')+(NJ.err?' Last check failed, showing the last price received.':'');
+  return `New Jersey average, ${NJ_LBL[FIN.njSector]}: ${fmt(c,2)} US cents per kWh (${NJ.data.month||'latest month'}, U.S. EIA).`+(v!=null?` At 1 EUR = ${fmt(CUR.rates.USD,4)} USD that is ${cs(v,2)} per MWh.`:'')+(NJ.err?' Last check failed, showing the last price received.':'');
 }
 async function njFetch(){
   NJ.busy=true;
@@ -41,6 +41,16 @@ async function njFetch(){
   NJ.busy=false;applyElecPrice();saveFin();tick(true);
 }
 applyElecPrice();setTimeout(njFetch,300);setInterval(njFetch,6*3600*1000);
+const EL_SRC_HTML='<div class="psrc"><span>Electricity price</span><div class="seg elSrc" role="group" aria-label="Electricity price source"><button type="button" data-v="auto">Auto (NJ)</button><button type="button" data-v="manual">Manual</button></div><label class="psec">Sector <select class="elSec"><option value="all">All sectors</option><option value="residential">Residential</option><option value="commercial">Commercial</option><option value="industrial">Industrial</option></select></label></div><div class="pstat elStat"></div>';
+function elSrcPaint(){
+  const auto=FIN.pMode==='auto';
+  document.querySelectorAll('.elSrc button').forEach(b=>{const on=b.dataset.v===FIN.pMode;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on);b.disabled=!can('edit');});
+  document.querySelectorAll('.elSec').forEach(x=>{x.value=FIN.njSector;x.disabled=!auto||!can('edit');x.parentElement.style.opacity=auto?1:.45;});
+  document.querySelectorAll('.elStat').forEach(x=>{x.textContent=elecStatus();x.classList.toggle('bad',auto&&!!NJ.err&&!NJ.data);});
+  document.querySelectorAll('input[data-f="off"],input[data-f="shoulder"],input[data-f="peak"],input[data-f="elp"]').forEach(i=>{i.readOnly=auto;i.classList.toggle('ro',auto);});
+}
+document.addEventListener('click',e=>{const b=e.target.closest('.elSrc button[data-v]');if(!b||!can('edit')||b.dataset.v===FIN.pMode)return;FIN.pMode=b.dataset.v;applyElecPrice();saveFin();addOp('Electricity price set to '+(FIN.pMode==='auto'?'automatic (New Jersey)':'manual'));if(FIN.pMode==='auto')njFetch();tick(true);});
+document.addEventListener('change',e=>{if(!e.target.classList||!e.target.classList.contains('elSec'))return;FIN.njSector=e.target.value;applyElecPrice();saveFin();tick(true);});
 const elecPriceTxt=()=>FIN.off===FIN.shoulder&&FIN.shoulder===FIN.peak?cs(FIN.peak,2)+' per MWh ('+cs(FIN.peak/1000,4)+' per kWh)':'a time-of-day tariff';
 
 /* ---------- tariff bands ---------- */
@@ -94,14 +104,17 @@ function renderFinance(){
     <div class="kpis" id="finK"></div>
     <div class="grid2 mt"><div class="card"><h3>Revenue and costs <span id="finU"></span></h3><canvas id="c_fin" class="tall"></canvas><div class="legend"></div></div>
     <div class="card"><h3>Profit and loss <span id="finP"></span></h3><div id="finPL"></div></div></div>
-    <div class="card mt"><h3>Prices and costs <span>assumptions, saved in this browser</span></h3><div class="fgrid" id="finF"></div>
+    <div class="card mt"><h3>Prices and costs <span>assumptions, saved in this browser</span></h3>${EL_SRC_HTML}<div class="fgrid mt" id="finF"></div>
     <div class="note">EBITDA means earnings before interest, tax, depreciation and amortisation. Operating cost is a yearly amount, a percentage of the project cost, spread evenly over every hour of the year, so a planned shutdown day still carries its share. Carbon credit price and factors are set on the Carbon credits page.</div></div>`)){
     attachTip($('#c_fin'));
-    const F=[['gate','Gate fee (EUR per t waste)',1],['capex','Project cost (EUR million)',1],['opexPct','Operating cost (% of project cost a year)',0.5],['own','Own electricity use (%)',0.5]];
-    $('#finF').innerHTML=F.map(f=>`<label class="field">${f[1]}<input type="number" step="${f[2]}" min="0" data-f="${f[0]}" value="${FIN[f[0]]}" ${can('edit')?'':'disabled'}></label>`).join('');
-    wireMoney($('#finF'),i=>FIN[i.dataset.f]);
-    $('#finF').addEventListener('change',e=>{const k=e.target.dataset.f;if(!k)return;const v=parseFloat(e.target.value);if(v>=0){FIN[k]=v;saveFin();bandCache.clear();tick(true);}});
+    const F=[['elp','Electricity price (EUR per MWh)',1],['gate','Gate fee (EUR per t waste)',1],['capex','Project cost (EUR million)',1],['opexPct','Operating cost (% of project cost a year)',0.5],['own','Own electricity use (%)',0.5]];
+    $('#finF').innerHTML=F.map(f=>`<label class="field">${f[1]}<input type="number" step="${f[2]}" min="0" data-f="${f[0]}" value="${f[0]==='elp'?avgTariff():FIN[f[0]]}" ${can('edit')?'':'disabled'}></label>`).join('');
+    wireMoney($('#finF'),i=>i.dataset.f==='elp'?avgTariff():FIN[i.dataset.f]);
+    $('#finF').addEventListener('change',e=>{const k=e.target.dataset.f;if(!k)return;const v=parseFloat(e.target.value);if(!(v>=0))return;
+      if(k==='elp'){if(FIN.pMode==='auto')return;FIN.man={off:v,shoulder:v,peak:v};applyElecPrice();saveFin();tick(true);return;}
+      FIN[k]=v;saveFin();bandCache.clear();tick(true);});
   }
+  elSrcPaint();
   const {P,bk}=D,f=finData(),t=f.tot,hrs=D.total.h||1;
   renderKpis($('#finK'),[
     {l:'Electricity sales',u:'EUR',v:t.rev.power+t.rev.subsidy,d:0,s:fmt(t.exp,1)+' MWh × '+cs(FIN.peak),c:'var(--power)'},
@@ -193,9 +206,7 @@ function renderGrid(){
     <div class="card"><h3>Export through the day <span>average kW by hour, shaded by band</span></h3><canvas id="c_grh" class="tall"></canvas><div class="legend"></div></div></div>
     <div class="grid2 mt"><div class="card"><h3>Earnings by band <span id="grP"></span></h3><div id="grT"></div></div>
     <div class="card"><h3>Electricity price <span><span class="curc">EUR</span> per MWh, saved in this browser</span></h3>
-      <div class="psrc"><span>Price source</span><div class="seg" id="elSrc" role="group" aria-label="Electricity price source"><button type="button" data-v="auto">Auto (NJ)</button><button type="button" data-v="manual">Manual</button></div>
-      <label class="psec">Sector <select id="elSec"><option value="all">All sectors</option><option value="residential">Residential</option><option value="commercial">Commercial</option><option value="industrial">Industrial</option></select></label></div>
-      <div class="pstat" id="elStat"></div>
+      ${EL_SRC_HTML}
       <div class="fgrid mt" id="grF"></div><div class="note">Auto uses the latest monthly New Jersey average retail electricity price from the U.S. Energy Information Administration, for the sector you choose, converted to euros at the European Central Bank rate. It is checked every 6 hours; EIA publishes a new month about two months later. Manual uses the prices you type, and lets you set a different price by time of day. Hours not in peak or off-peak count as shoulder.</div></div></div>`)){
     attachTip($('#c_gr'));attachTip($('#c_grh'));
     const F=[['off','Off-peak price (EUR per MWh)'],['shoulder','Shoulder price (EUR per MWh)'],['peak','Peak price (EUR per MWh)'],['peakFrom','Peak starts (hour)'],['peakTo','Peak ends (hour)'],['offFrom','Off-peak starts (hour)'],['offTo','Off-peak ends (hour)']];
@@ -204,14 +215,10 @@ function renderGrid(){
     $('#grF').addEventListener('change',e=>{const k=e.target.dataset.f;if(!k)return;const v=parseFloat(e.target.value);if(!(v>=0))return;
       if(['off','shoulder','peak'].includes(k)){if(FIN.pMode==='auto'){e.target.value=FIN[k];return;}FIN.man[k]=v;}
       FIN[k]=v;saveFin();bandCache.clear();tick(true);});
-    $('#elSrc').addEventListener('click',e=>{const b=e.target.closest('button[data-v]');if(!b||!can('edit')||b.dataset.v===FIN.pMode)return;FIN.pMode=b.dataset.v;applyElecPrice();saveFin();addOp('Electricity price set to '+(FIN.pMode==='auto'?'automatic (New Jersey)':'manual'));if(FIN.pMode==='auto')njFetch();tick(true);});
-    $('#elSec').addEventListener('change',e=>{FIN.njSector=e.target.value;applyElecPrice();saveFin();tick(true);});
   }
   applyElecPrice();
   { const auto=FIN.pMode==='auto';
-    $('#elSrc').querySelectorAll('button').forEach(b=>{const on=b.dataset.v===FIN.pMode;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on);b.disabled=!can('edit');});
-    $('#elSec').value=FIN.njSector;$('#elSec').disabled=!auto||!can('edit');$('#elSec').parentElement.style.opacity=auto?1:.45;
-    $('#elStat').textContent=elecStatus();$('#elStat').classList.toggle('bad',auto&&!!NJ.err&&!NJ.data);
+    elSrcPaint();
     $('#grF').querySelectorAll('input[data-f]').forEach(i=>{const k=i.dataset.f,pr=['off','shoulder','peak'].includes(k);if(pr){i.readOnly=auto;i.classList.toggle('ro',auto);}if(document.activeElement!==i)i.value=i.dataset.cur==='1'?curVal(FIN[k]):FIN[k];}); }
   const {P,bk}=D;
   const per=bk.map((b,i)=>b.acc?bandsBetween(b.t,bucketEnd(b,i,bk,P)):null);

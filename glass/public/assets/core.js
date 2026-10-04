@@ -32,7 +32,7 @@ function wireMoney(box,get){
     const lab=i.closest('label')||(i.id&&document.querySelector('label[for="'+i.id+'"]'));if(!lab)return;
     const tw=document.createTreeWalker(lab,NodeFilter.SHOW_TEXT),nodes=[];let n;while((n=tw.nextNode()))if(/\bEUR\b/.test(n.nodeValue)&&!(n.parentElement&&n.parentElement.classList.contains('curc')))nodes.push(n);
     if(!nodes.length&&!lab.querySelector('.curc'))return;
-    nodes.forEach(n=>{const sp=document.createElement('span');sp.innerHTML=n.nodeValue.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\bEUR\b/g,'<span class="curc">EUR</span>');n.replaceWith(...sp.childNodes);});
+    nodes.forEach(n=>{const sp=document.createElement('span');sp.className='lt';sp.innerHTML=n.nodeValue.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\bEUR\b/g,'<span class="curc">EUR</span>');n.replaceWith(sp);});
     i.dataset.cur='1';i._get=()=>get(i);i.value=curVal(get(i));
   });
   if(!box._mw){box._mw=1;box.addEventListener('change',e=>{const i=e.target;if(!i||!i.dataset||i.dataset.cur!=='1')return;const v=parseFloat(i.value);if(isFinite(v)&&curCode()!=='EUR')i.value=String(v/curRate());setTimeout(()=>{if(i._get)i.value=curVal(i._get());},0);},true);}

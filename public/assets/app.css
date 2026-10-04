@@ -278,3 +278,5 @@ canvas.tall{height:260px}
 .psrc .psec{display:flex;align-items:center;gap:6px}
 .psrc select{background:var(--bg);border:1px solid var(--line2);color:var(--text);border-radius:7px;padding:5px 8px;font:inherit}
 .fgrid input.ro{opacity:.7;cursor:default}
+.fgrid .field{justify-content:space-between}
+.fgrid .field>input,.fgrid .field>select{margin-top:auto}
