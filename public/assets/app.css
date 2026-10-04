@@ -272,3 +272,9 @@ canvas.tall{height:260px}
 #modes .cdays input{width:58px;background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:6px;padding:4px 6px;font:inherit;text-align:right}
 #modes .cdays input:focus{outline:none;border-color:var(--teal)}
 #modes button[data-m=custom].on + .cdays input{border-color:var(--teal);color:var(--teal);font-weight:600}
+/* price source row */
+.psrc{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:2px 0 6px;font-size:13px;color:var(--muted)}
+.psrc .seg{min-width:200px}
+.psrc .psec{display:flex;align-items:center;gap:6px}
+.psrc select{background:var(--bg);border:1px solid var(--line2);color:var(--text);border-radius:7px;padding:5px 8px;font:inherit}
+.fgrid input.ro{opacity:.7;cursor:default}

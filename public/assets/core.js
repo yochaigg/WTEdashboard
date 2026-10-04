@@ -352,7 +352,7 @@ pmPaint();pmFetch();setInterval(pmFetch,6*3600*1000);
 function curPaint(){
   const code=curCode();
   $('#curSel').querySelectorAll('button').forEach(b=>{const v=b.dataset.c,ok=v==='EUR'||CUR.rates[v]>0;b.classList.toggle('on',v===code);b.setAttribute('aria-pressed',v===code);b.disabled=!ok;
-    b.title=v==='EUR'?'Euro, the currency the plant reports in':ok?`1 EUR = ${fmt(CUR.rates[v],4)} ${v}, ${CUR.src||'market rate'}${CUR.date?' of '+fd(Date.parse(CUR.date)):''}`:'Exchange rate not available yet';});
+    b.title=v==='EUR'?'Euro, the currency the plant reports in':ok?`1 EUR = ${fmt(CUR.rates[v],4)} ${v}, ${CUR.src||'market rate'}${CUR.date?' of '+fd(Date.parse(CUR.date+'T12:00:00')):''}`:'Exchange rate not available yet';});
   document.querySelectorAll('.curc').forEach(e=>e.textContent=code);
 }
 async function curFetch(){
