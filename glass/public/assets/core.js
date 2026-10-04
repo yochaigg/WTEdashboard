@@ -24,6 +24,23 @@ const CURS={EUR:'€',USD:'$',GBP:'£'};
 const CUR=Object.assign({code:'EUR',rates:{EUR:1},date:'',src:''},lsGet('wtg_cur',{}));
 const curCode=()=>CUR.rates[CUR.code]>0?CUR.code:'EUR';
 const curRate=()=>CUR.rates[curCode()]||1;
+/* inputs typed in money: shown in the selected currency, stored in EUR */
+const curVal=v=>{const x=(+v||0)*curRate();return +x.toFixed(Math.abs(x)<1&&x!==0?4:2);};
+function wireMoney(box,get){
+  if(!box)return;
+  box.querySelectorAll('input[type=number]').forEach(i=>{
+    const lab=i.closest('label')||(i.id&&document.querySelector('label[for="'+i.id+'"]'));if(!lab)return;
+    const tw=document.createTreeWalker(lab,NodeFilter.SHOW_TEXT),nodes=[];let n;while((n=tw.nextNode()))if(/\bEUR\b/.test(n.nodeValue)&&!(n.parentElement&&n.parentElement.classList.contains('curc')))nodes.push(n);
+    if(!nodes.length&&!lab.querySelector('.curc'))return;
+    nodes.forEach(n=>{const sp=document.createElement('span');sp.innerHTML=n.nodeValue.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\bEUR\b/g,'<span class="curc">EUR</span>');n.replaceWith(...sp.childNodes);});
+    i.dataset.cur='1';i._get=()=>get(i);i.value=curVal(get(i));
+  });
+  if(!box._mw){box._mw=1;box.addEventListener('change',e=>{const i=e.target;if(!i||!i.dataset||i.dataset.cur!=='1')return;const v=parseFloat(i.value);if(isFinite(v)&&curCode()!=='EUR')i.value=String(v/curRate());setTimeout(()=>{if(i._get)i.value=curVal(i._get());},0);},true);}
+}
+function refreshMoney(){
+  document.querySelectorAll('input[data-cur="1"]').forEach(i=>{if(i._get&&document.activeElement!==i){const v=curVal(i._get());if(+i.value!==v)i.value=v;}});
+  const code=curCode();document.querySelectorAll('.curc').forEach(e=>{if(e.textContent!==code)e.textContent=code;});
+}
 const cs=(v,d=0)=>(v<0?'-':'')+CURS[curCode()]+fmt(Math.abs(v)*curRate(),d);
 
 /* ---------- charts ---------- */
@@ -306,6 +323,7 @@ function tick(force){
     $('#plabel').textContent=pg.period?D.P.label+', '+D.P.range:(pg.sub?pg.sub():'');
     if(pg.render)pg.render();
     if(typeof afterTick==='function')afterTick();
+    refreshMoney();
     $('#err').hidden=true;
   }catch(e){showErr(e);}
 }
@@ -320,9 +338,9 @@ $('#alertList').addEventListener('click',e=>{const k=e.target.dataset&&e.target.
 makeCards($('#mainCharts'),MAIN_CARDS);makeCards($('#carbonCharts'),CARBON_CARDS);
 /* assumptions form */
 const F={land:$('#fLand'),disp:$('#fDisp'),fossil:$('#fFossil'),price:$('#fPrice')};
-function syncForm(){F.land.value=cfg.land;F.disp.value=cfg.disp;F.fossil.value=cfg.fossil;F.price.value=cfg.price;
+function syncForm(){F.land.value=cfg.land;F.disp.value=cfg.disp;F.fossil.value=cfg.fossil;F.price.value=curVal(cfg.price);
   const sel=$('#fPreset');sel.value=[...sel.options].some(o=>o.value&&+o.value===+cfg.disp)?String(cfg.disp.toFixed(2)):'';}
-Object.keys(F).forEach(k=>F[k].addEventListener('input',()=>{if(k==='price'&&cfg.priceMode==='auto')return;const v=parseFloat(F[k].value);cfg[k]=isNaN(v)?0:v;if(k==='price')cfg.manualPrice=cfg.price;lsSet('wtg_carbon2',cfg);if(k==='disp')syncPreset();tick(true);}));
+Object.keys(F).forEach(k=>F[k].addEventListener('input',()=>{if(k==='price'&&cfg.priceMode==='auto')return;const v=parseFloat(F[k].value)/(k==='price'?curRate():1);cfg[k]=isNaN(v)?0:v;if(k==='price')cfg.manualPrice=cfg.price;lsSet('wtg_carbon2',cfg);if(k==='disp')syncPreset();tick(true);}));
 function syncPreset(){const sel=$('#fPreset');sel.value=[...sel.options].some(o=>o.value&&+o.value===+cfg.disp)?[...sel.options].find(o=>o.value&&+o.value===+cfg.disp).value:'';}
 $('#fPreset').addEventListener('change',e=>{if(e.target.value){cfg.disp=parseFloat(e.target.value);F.disp.value=cfg.disp;lsSet('wtg_carbon2',cfg);tick(true);}});
 syncForm();syncPreset();
@@ -331,13 +349,13 @@ if(!cfg.priceMode)cfg.priceMode='auto';
 const PM={busy:false,err:''};
 function pmPaint(){
   $('#fPriceMode').querySelectorAll('button').forEach(b=>{const on=b.dataset.v===cfg.priceMode;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on);});
-  const auto=cfg.priceMode==='auto';F.price.readOnly=auto;F.price.classList.toggle('ro',auto);F.price.value=cfg.price;
+  const auto=cfg.priceMode==='auto';F.price.readOnly=auto;F.price.classList.toggle('ro',auto);if(document.activeElement!==F.price||auto)F.price.value=curVal(cfg.price);
   let t;
   if(!auto)t='Manual price, typed in.';
   else if(PM.busy)t='Getting the latest market price...';
   else if(cfg.autoAt&&!PM.err)t=`EU ETS allowance (EUA), ${cfg.autoBasis||'latest'}. Source ${cfg.autoSrc||'SendeCO2'}, checked ${fd(cfg.autoAt)} ${hhmm(cfg.autoAt)}.`;
   else if(cfg.autoAt)t=`Couldn't reach the price feed (${PM.err}). Using the last market price from ${fd(cfg.autoAt)}.`;
-  else t=`Couldn't reach the price feed${PM.err?' ('+PM.err+')':''}. Using ${fmt(cfg.price,2)} EUR until it answers.`;
+  else t=`Couldn't reach the price feed${PM.err?' ('+PM.err+')':''}. Using ${cs(cfg.price,2)} until it answers.`;
   $('#fPriceStat').textContent=t;$('#fPriceStat').classList.toggle('bad',auto&&!!PM.err);
 }
 async function pmFetch(){
@@ -349,7 +367,8 @@ async function pmFetch(){
   PM.busy=false;pmPaint();
 }
 $('#fPriceMode').addEventListener('click',e=>{const v=e.target.dataset&&e.target.dataset.v;if(!v||v===cfg.priceMode)return;cfg.priceMode=v;if(v==='manual'&&cfg.manualPrice!=null){cfg.price=cfg.manualPrice;tick(true);}lsSet('wtg_carbon2',cfg);if(typeof addOp==='function')addOp('Credit price set to '+(v==='auto'?'automatic':'manual'));pmPaint();if(v==='auto')pmFetch();});
-F.price.addEventListener('input',()=>{if(cfg.priceMode==='auto'){F.price.value=cfg.price;}});
+F.price.addEventListener('input',()=>{if(cfg.priceMode==='auto'){F.price.value=curVal(cfg.price);}});
+wireMoney(document.querySelector('[data-page="carbon"] .form'),i=>i.id==='fPrice'?cfg.price:0);
 pmPaint();pmFetch();setInterval(pmFetch,6*3600*1000);
 /* currency toggle */
 function curPaint(){

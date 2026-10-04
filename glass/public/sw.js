@@ -1,5 +1,5 @@
 /* offline shell for the installed app: serve the console from cache, refresh it in the background */
-const CACHE='gas-console-v7';
+const CACHE='gas-console-v8';
 const SHELL=['./','./index.html','./assets/base.css','./assets/app.css','./assets/sim.js','./assets/core.js','./assets/ops.js','./assets/business.js','./assets/platform.js','./assets/boot.js','./assets/icon.svg','./manifest.webmanifest'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting()));});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==CACHE).map(x=>caches.delete(x)))).then(()=>self.clients.claim()));});

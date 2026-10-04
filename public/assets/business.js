@@ -99,6 +99,7 @@ function renderFinance(){
     attachTip($('#c_fin'));
     const F=[['gate','Gate fee (EUR per t waste)',1],['capex','Project cost (EUR million)',1],['opexPct','Operating cost (% of project cost a year)',0.5],['own','Own electricity use (%)',0.5]];
     $('#finF').innerHTML=F.map(f=>`<label class="field">${f[1]}<input type="number" step="${f[2]}" min="0" data-f="${f[0]}" value="${FIN[f[0]]}" ${can('edit')?'':'disabled'}></label>`).join('');
+    wireMoney($('#finF'),i=>FIN[i.dataset.f]);
     $('#finF').addEventListener('change',e=>{const k=e.target.dataset.f;if(!k)return;const v=parseFloat(e.target.value);if(v>=0){FIN[k]=v;saveFin();bandCache.clear();tick(true);}});
   }
   const {P,bk}=D,f=finData(),t=f.tot,hrs=D.total.h||1;
@@ -160,14 +161,14 @@ function renderWhatif(){
     <div class="card"><h3>One year <span>compared with the current plant settings</span></h3><div class="bigres" id="wiR"></div></div>
     <div class="card"><h3>Cumulative cash over 15 years <span><span class="curc">EUR</span> million, before financing and tax</span></h3><canvas id="c_wi"></canvas><div class="legend"></div></div></div></div>
     <div class="card mt"><h3>Saved scenarios</h3><div class="scrollx" id="wiList"></div></div>`)){
-    $('#wiS').innerHTML=WI_SL.map(s=>`<div class="sl"><label for="wi_${s[0]}">${s[1]} <span class="muted">${s[2]}</span></label><output id="wo_${s[0]}"></output><input type="range" id="wi_${s[0]}" data-k="${s[0]}" min="${s[3]}" max="${s[4]}" step="${s[5]}"></div>`).join('');
+    $('#wiS').innerHTML=WI_SL.map(s=>`<div class="sl"><label for="wi_${s[0]}">${s[1]} <span class="muted">${s[2].replace(/^EUR/,'<span class="curc">EUR</span>')}</span></label><output id="wo_${s[0]}"></output><input type="range" id="wi_${s[0]}" data-k="${s[0]}" min="${s[3]}" max="${s[4]}" step="${s[5]}"></div>`).join('');
     $('#wiS').addEventListener('input',e=>{const k=e.target.dataset.k;if(!k)return;WI[k]=parseFloat(e.target.value);lsSet('wte_wi3',WI);renderWhatif();});
     $('#wiReset').addEventListener('click',()=>{WI=wiBase();lsSet('wte_wi3',WI);renderWhatif();});
     $('#wiSave').addEventListener('click',()=>{const L=lsGet('wte_wi_list',[]);const nm='Scenario '+(L.length+1);L.push({name:nm,x:Object.assign({},WI),t:Date.now()});lsSet('wte_wi_list',L.slice(-8));renderWhatif();});
     $('#wiList').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const L=lsGet('wte_wi_list',[]);const i=+b.dataset.i;if(b.dataset.a==='load'&&L[i]){WI=Object.assign({},L[i].x);lsSet('wte_wi3',WI);}if(b.dataset.a==='del'){L.splice(i,1);lsSet('wte_wi_list',L);}renderWhatif();});
     attachTip($('#c_wi'));
   }
-  WI_SL.forEach(s=>{const i=$('#wi_'+s[0]);if(+i.value!==WI[s[0]])i.value=WI[s[0]];$('#wo_'+s[0]).textContent=fmt(WI[s[0]],s[6]);});
+  WI_SL.forEach(s=>{const i=$('#wi_'+s[0]);if(+i.value!==WI[s[0]])i.value=WI[s[0]];$('#wo_'+s[0]).textContent=fmt(WI[s[0]]*(/^EUR/.test(s[2])?curRate():1),s[6]);});
   const m=wiModel(WI),b=wiModel(wiBase());
   const dl=(v,bv,f)=>{const d=v-bv;return Math.abs(d)<1e-9?'<small>same as now</small>':'<small class="'+(d>0?'pos':'neg')+'">'+(d>0?'+':'-')+f(Math.abs(d))+' vs now</small>';};
   $('#wiPay').innerHTML=isFinite(m.payback)?fmt(m.payback,1)+'<small>years</small>':'Never<small>EBITDA is negative</small>';
@@ -178,7 +179,7 @@ function renderWhatif(){
   const yrs=[...Array(16).keys()],cum=yrs.map(y=>(-WI.capex*1e6+m.E*y)/1e6*curRate()),cumB=yrs.map(y=>(-wiBase().capex*1e6+b.E*y)/1e6*curRate());
   drawChart($('#c_wi'),{labels:yrs.map(y=>'Year '+y),series:[{name:'This scenario',color:'#d9c46a',type:'line',data:cum,dec:1},{name:'Current plant',color:'#5d6a77',type:'line',data:cumB,dec:1}],limits:[{v:0,color:'#8a97a4',label:'break-even'}]});
   const L=lsGet('wte_wi_list',[]);
-  $('#wiList').innerHTML=L.length?'<table><tr><th>Name</th><th class="r">t/day</th><th class="r">Days</th><th class="r">H₂ %</th><th class="r">EUR/MWh</th><th class="r">Gate fee</th><th class="r">Credit price</th><th class="r">EBITDA a year</th><th class="r">Payback</th><th></th></tr>'+L.map((s,i)=>{const r=wiModel(s.x);return `<tr><td>${esch(s.name)}</td><td class="r">${fmt(s.x.tpd)}</td><td class="r">${s.x.days}</td><td class="r">${fmt(s.x.h2,1)}</td><td class="r">${fmt(s.x.price)}</td><td class="r">${fmt(s.x.gate)}</td><td class="r">${fmt(s.x.cprice)}</td><td class="r">${eurK(r.E)}</td><td class="r">${isFinite(r.payback)?fmt(r.payback,1)+' years':'never'}</td><td class="r nw"><button class="btn sm" data-a="load" data-i="${i}">Load</button> <button class="btn sm" data-a="del" data-i="${i}">Delete</button></td></tr>`;}).join('')+'</table>':'<div class="empty">Save a scenario to compare it here.</div>';
+  $('#wiList').innerHTML=L.length?'<table><tr><th>Name</th><th class="r">t/day</th><th class="r">Days</th><th class="r">H₂ %</th><th class="r"><span class="curc">EUR</span>/MWh</th><th class="r">Gate fee</th><th class="r">Credit price</th><th class="r">EBITDA a year</th><th class="r">Payback</th><th></th></tr>'+L.map((s,i)=>{const r=wiModel(s.x);return `<tr><td>${esch(s.name)}</td><td class="r">${fmt(s.x.tpd)}</td><td class="r">${s.x.days}</td><td class="r">${fmt(s.x.h2,1)}</td><td class="r">${fmt(s.x.price*curRate())}</td><td class="r">${fmt(s.x.gate*curRate())}</td><td class="r">${fmt(s.x.cprice*curRate())}</td><td class="r">${eurK(r.E)}</td><td class="r">${isFinite(r.payback)?fmt(r.payback,1)+' years':'never'}</td><td class="r nw"><button class="btn sm" data-a="load" data-i="${i}">Load</button> <button class="btn sm" data-a="del" data-i="${i}">Delete</button></td></tr>`;}).join('')+'</table>':'<div class="empty">Save a scenario to compare it here.</div>';
 }
 PAGES.whatif={title:'What-if',period:false,still:true,render:renderWhatif,sub:()=>'A full year under the conditions you set'};
 
@@ -191,14 +192,15 @@ function renderGrid(){
     <div class="grid2 mt"><div class="card"><h3>Exported by tariff band <span id="grU"></span></h3><canvas id="c_gr" class="tall"></canvas><div class="legend"></div></div>
     <div class="card"><h3>Export through the day <span>average kW by hour, shaded by band</span></h3><canvas id="c_grh" class="tall"></canvas><div class="legend"></div></div></div>
     <div class="grid2 mt"><div class="card"><h3>Earnings by band <span id="grP"></span></h3><div id="grT"></div></div>
-    <div class="card"><h3>Electricity price <span>EUR per MWh, saved in this browser</span></h3>
+    <div class="card"><h3>Electricity price <span><span class="curc">EUR</span> per MWh, saved in this browser</span></h3>
       <div class="psrc"><span>Price source</span><div class="seg" id="elSrc" role="group" aria-label="Electricity price source"><button type="button" data-v="auto">Auto (NJ)</button><button type="button" data-v="manual">Manual</button></div>
       <label class="psec">Sector <select id="elSec"><option value="all">All sectors</option><option value="residential">Residential</option><option value="commercial">Commercial</option><option value="industrial">Industrial</option></select></label></div>
       <div class="pstat" id="elStat"></div>
       <div class="fgrid mt" id="grF"></div><div class="note">Auto uses the latest monthly New Jersey average retail electricity price from the U.S. Energy Information Administration, for the sector you choose, converted to euros at the European Central Bank rate. It is checked every 6 hours; EIA publishes a new month about two months later. Manual uses the prices you type, and lets you set a different price by time of day. Hours not in peak or off-peak count as shoulder.</div></div></div>`)){
     attachTip($('#c_gr'));attachTip($('#c_grh'));
-    const F=[['off','Off-peak price'],['shoulder','Shoulder price'],['peak','Peak price'],['peakFrom','Peak starts (hour)'],['peakTo','Peak ends (hour)'],['offFrom','Off-peak starts (hour)'],['offTo','Off-peak ends (hour)']];
+    const F=[['off','Off-peak price (EUR per MWh)'],['shoulder','Shoulder price (EUR per MWh)'],['peak','Peak price (EUR per MWh)'],['peakFrom','Peak starts (hour)'],['peakTo','Peak ends (hour)'],['offFrom','Off-peak starts (hour)'],['offTo','Off-peak ends (hour)']];
     $('#grF').innerHTML=F.map(f=>`<label class="field">${f[1]}<input type="number" min="0" max="${/From|To/.test(f[0])?24:1000}" step="1" data-f="${f[0]}" value="${FIN[f[0]]}" ${can('edit')?'':'disabled'}></label>`).join('');
+    wireMoney($('#grF'),i=>FIN[i.dataset.f]);
     $('#grF').addEventListener('change',e=>{const k=e.target.dataset.f;if(!k)return;const v=parseFloat(e.target.value);if(!(v>=0))return;
       if(['off','shoulder','peak'].includes(k)){if(FIN.pMode==='auto'){e.target.value=FIN[k];return;}FIN.man[k]=v;}
       FIN[k]=v;saveFin();bandCache.clear();tick(true);});
@@ -210,7 +212,7 @@ function renderGrid(){
     $('#elSrc').querySelectorAll('button').forEach(b=>{const on=b.dataset.v===FIN.pMode;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on);b.disabled=!can('edit');});
     $('#elSec').value=FIN.njSector;$('#elSec').disabled=!auto||!can('edit');$('#elSec').parentElement.style.opacity=auto?1:.45;
     $('#elStat').textContent=elecStatus();$('#elStat').classList.toggle('bad',auto&&!!NJ.err&&!NJ.data);
-    $('#grF').querySelectorAll('input[data-f]').forEach(i=>{const k=i.dataset.f,pr=['off','shoulder','peak'].includes(k);if(pr){i.readOnly=auto;i.classList.toggle('ro',auto);}if(document.activeElement!==i)i.value=FIN[k];}); }
+    $('#grF').querySelectorAll('input[data-f]').forEach(i=>{const k=i.dataset.f,pr=['off','shoulder','peak'].includes(k);if(pr){i.readOnly=auto;i.classList.toggle('ro',auto);}if(document.activeElement!==i)i.value=i.dataset.cur==='1'?curVal(FIN[k]):FIN[k];}); }
   const {P,bk}=D;
   const per=bk.map((b,i)=>b.acc?bandsBetween(b.t,bucketEnd(b,i,bk,P)):null);
   const tot={off:0,shoulder:0,peak:0,gen:0};per.forEach(x=>{if(x){tot.off+=x.off;tot.shoulder+=x.shoulder;tot.peak+=x.peak;tot.gen+=x.gen;}});
@@ -222,7 +224,7 @@ function renderGrid(){
   for(let t=Math.floor((now-span)/(30*MIN))*30*MIN;t<now;t+=30*MIN){const h=new Date(t).getHours();hk[h][0]+=plant(t).kw*(1-FIN.own/100);hk[h][1]++;}
   const prof=hk.map(x=>x[1]?x[0]/x[1]:null),bands=[];let s=0;for(let h=1;h<=24;h++){if(h===24||bandOf(h)!==bandOf(s)){bands.push({i0:s-0.5<0?0:s-0.5,i1:Math.min(23,h-0.5),color:bandOf(s)==='peak'?'rgba(255,143,69,.13)':bandOf(s)==='off'?'rgba(94,127,153,.12)':'rgba(201,138,77,.06)'});s=h;}}
   drawChart($('#c_grh'),{labels:[...Array(24).keys()].map(h=>pad(h)+':00'),series:[{name:'Export kW',color:'#ff8f45',type:'line',data:prof,dec:0}],bands});
-  $('#grT').innerHTML='<table><tr><th>Band</th><th class="r">MWh</th><th class="r">EUR per MWh</th><th class="r">Earnings</th><th class="r">Share</th></tr>'+['off','shoulder','peak'].map(k=>`<tr><td><i class="sv" style="background:${BAND_COL[k]}"></i>${BAND_TXT[k]}</td><td class="r">${fmt(tot[k],1)}</td><td class="r">${fmt(FIN[k])}</td><td class="r">${eur(tot[k]*FIN[k])}</td><td class="r">${fmt(eurT?tot[k]*FIN[k]/eurT*100:0,0)} %</td></tr>`).join('')+`<tr><td>Tariff total</td><td class="r">${fmt(exp,1)}</td><td class="r">${fmt(exp?eurT/exp:0,1)}</td><td class="r">${eur(eurT)}</td><td></td></tr>${FIN.subsidy?`<tr><td>Subsidy</td><td class="r">${fmt(exp,1)}</td><td class="r">${fmt(FIN.subsidy*1000)}</td><td class="r">${eur(exp*1000*FIN.subsidy)}</td><td></td></tr>`:''}<tr><td><b>Total</b></td><td class="r"><b>${fmt(exp,1)}</b></td><td class="r">${fmt(exp?eurT/exp+FIN.subsidy*1000:0,1)}</td><td class="r"><b>${eur(eurT+exp*1000*FIN.subsidy)}</b></td><td></td></tr></table>`+
+  $('#grT').innerHTML='<table><tr><th>Band</th><th class="r">MWh</th><th class="r">'+curCode()+' per MWh</th><th class="r">Earnings</th><th class="r">Share</th></tr>'+['off','shoulder','peak'].map(k=>`<tr><td><i class="sv" style="background:${BAND_COL[k]}"></i>${BAND_TXT[k]}</td><td class="r">${fmt(tot[k],1)}</td><td class="r">${fmt(FIN[k]*curRate(),2)}</td><td class="r">${eur(tot[k]*FIN[k])}</td><td class="r">${fmt(eurT?tot[k]*FIN[k]/eurT*100:0,0)} %</td></tr>`).join('')+`<tr><td>Tariff total</td><td class="r">${fmt(exp,1)}</td><td class="r">${fmt(exp?eurT/exp*curRate():0,2)}</td><td class="r">${eur(eurT)}</td><td></td></tr>${FIN.subsidy?`<tr><td>Subsidy</td><td class="r">${fmt(exp,1)}</td><td class="r">${fmt(FIN.subsidy*1000)}</td><td class="r">${eur(exp*1000*FIN.subsidy)}</td><td></td></tr>`:''}<tr><td><b>Total</b></td><td class="r"><b>${fmt(exp,1)}</b></td><td class="r">${fmt(exp?eurT/exp+FIN.subsidy*1000:0,1)}</td><td class="r"><b>${eur(eurT+exp*1000*FIN.subsidy)}</b></td><td></td></tr></table>`+
     (FIN.peak===FIN.off&&FIN.off===FIN.shoulder?'':`<div class="note">The engines run flat out around the clock, so each band earns in proportion to its hours. Holding gas in a buffer to run harder in the ${FIN.peakFrom}:00 to ${FIN.peakTo}:00 peak would raise the realised price.</div>`);
 }
 PAGES.grid={title:'Grid export',period:true,render:renderGrid,csv:()=>{const {P,bk}=D;const rows=metaRows([['Report','Grid export by tariff band'],['Period',P.label+' ('+P.range+')'],['Own use %',FIN.own],['Tariff EUR/MWh off, shoulder, peak',FIN.off+', '+FIN.shoulder+', '+FIN.peak]]);rows.push(['Period','Generated MWh','Off-peak MWh','Shoulder MWh','Peak MWh','Earnings EUR']);bk.forEach((b,i)=>{if(!b.acc)return;const x=bandsBetween(b.t,bucketEnd(b,i,bk,P));rows.push([tsf(b.t),r1(x.gen,3),r1(x.off,3),r1(x.shoulder,3),r1(x.peak,3),r1(bandEur(x),0)]);});return {name:'grid-export_'+fileTag()+'_'+slug(P.label)+'.csv',text:csvText(rows)};}};

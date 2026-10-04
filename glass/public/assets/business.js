@@ -48,7 +48,7 @@ function gasSrcPaint(){
   const auto=FIN.ngMode==='auto';
   document.querySelectorAll('.ngSrc button').forEach(b=>{const on=b.dataset.v===FIN.ngMode;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on);b.disabled=!can('edit');});
   document.querySelectorAll('.ngStat').forEach(e=>{e.textContent=gasStatus();e.classList.toggle('bad',auto&&!!GASP.err&&!GASP.data);});
-  document.querySelectorAll('input[data-f="ng"]').forEach(i=>{i.readOnly=auto;i.classList.toggle('ro',auto);if(document.activeElement!==i)i.value=FIN.ng;});
+  document.querySelectorAll('input[data-f="ng"]').forEach(i=>{i.readOnly=auto;i.classList.toggle('ro',auto);if(document.activeElement!==i)i.value=curVal(FIN.ng);});
 }
 document.addEventListener('click',e=>{const b=e.target.closest('.ngSrc button[data-v]');if(!b||!can('edit')||b.dataset.v===FIN.ngMode)return;FIN.ngMode=b.dataset.v;applyGasPrice();saveFin();addOp('Market gas price set to '+(FIN.ngMode==='auto'?'automatic (TTF)':'manual'));if(FIN.ngMode==='auto')gasFetch();tick(true);});
 const NG_SRC_HTML='<div class="psrc"><span>Market gas price</span><div class="seg ngSrc" role="group" aria-label="Market gas price source"><button type="button" data-v="auto">Auto, TTF</button><button type="button" data-v="manual">Manual</button></div></div><div class="pstat ngStat"></div>';
@@ -114,6 +114,7 @@ function renderFinance(){
     attachTip($('#c_fin'));
     const F=[['ng','Market gas price (EUR per MMBtu)',0.01],['disc','Syngas discount to market gas price (%)',1],['mmbtu','MMBtu sold per 1,000 Nm³ of syngas',0.5],['gate','Gate fee (EUR per t waste)',1],['elec','Electricity bought (EUR per kWh)',0.01],['capex','Project cost (EUR million)',1],['opexPct','Operating cost (% of project cost a year)',0.5]];
     $('#finF').innerHTML=F.map(f=>`<label class="field">${f[1]}<input type="number" step="${f[2]}" min="0" data-f="${f[0]}" value="${FIN[f[0]]}" ${can('edit')?'':'disabled'}></label>`).join('');
+    wireMoney($('#finF'),i=>FIN[i.dataset.f]);
     $('#finF').addEventListener('change',e=>{const k=e.target.dataset.f;if(!k)return;const v=parseFloat(e.target.value);if(v>=0){if(k==='ng'){if(FIN.ngMode==='auto'){e.target.value=FIN.ng;return;}FIN.ngMan=v;}FIN[k]=v;saveFin();if(k==='mmbtu')applyMmbtu();tick(true);}});
   }
   applyGasPrice();gasSrcPaint();
@@ -183,14 +184,14 @@ function renderWhatif(){
     <div class="card"><h3>One year <span>compared with the current plant settings</span></h3><div class="bigres" id="wiR"></div></div>
     <div class="card"><h3>Cumulative cash over 15 years <span><span class="curc">EUR</span> million, before financing and tax</span></h3><canvas id="c_wi"></canvas><div class="legend"></div></div></div></div>
     <div class="card mt"><h3>Saved scenarios</h3><div class="scrollx" id="wiList"></div></div>`)){
-    $('#wiS').innerHTML=WI_SL.map(s=>`<div class="sl"><label for="wi_${s[0]}">${s[1]} <span class="muted">${s[2]}</span></label><output id="wo_${s[0]}"></output><input type="range" id="wi_${s[0]}" data-k="${s[0]}" min="${s[3]}" max="${s[4]}" step="${s[5]}"></div>`).join('');
+    $('#wiS').innerHTML=WI_SL.map(s=>`<div class="sl"><label for="wi_${s[0]}">${s[1]} <span class="muted">${s[2].replace(/^EUR/,'<span class="curc">EUR</span>')}</span></label><output id="wo_${s[0]}"></output><input type="range" id="wi_${s[0]}" data-k="${s[0]}" min="${s[3]}" max="${s[4]}" step="${s[5]}"></div>`).join('');
     $('#wiS').addEventListener('input',e=>{const k=e.target.dataset.k;if(!k)return;WI[k]=parseFloat(e.target.value);lsSet('wtg_wi6',WI);renderWhatif();});
     $('#wiReset').addEventListener('click',()=>{WI=wiBase();lsSet('wtg_wi6',WI);renderWhatif();});
     $('#wiSave').addEventListener('click',()=>{const L=lsGet('wtg_wi_list',[]);L.push({name:'Scenario '+(L.length+1),x:Object.assign({},WI),t:Date.now()});lsSet('wtg_wi_list',L.slice(-8));renderWhatif();});
     $('#wiList').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const L=lsGet('wtg_wi_list',[]);const i=+b.dataset.i;if(b.dataset.a==='load'&&L[i]){WI=Object.assign({},L[i].x);lsSet('wtg_wi6',WI);}if(b.dataset.a==='del'){L.splice(i,1);lsSet('wtg_wi_list',L);}renderWhatif();});
     attachTip($('#c_wi'));
   }
-  WI_SL.forEach(s=>{const i=$('#wi_'+s[0]);if(+i.value!==WI[s[0]])i.value=WI[s[0]];$('#wo_'+s[0]).textContent=fmt(WI[s[0]],s[6]);});
+  WI_SL.forEach(s=>{const i=$('#wi_'+s[0]);if(+i.value!==WI[s[0]])i.value=WI[s[0]];$('#wo_'+s[0]).textContent=fmt(WI[s[0]]*(/^EUR/.test(s[2])?curRate():1),s[6]);});
   const m=wiModel(WI),b=wiModel(wiBase());
   const dl=(v,bv,f)=>{const d=v-bv;return Math.abs(d)<1e-9?'<small>same as now</small>':'<small class="'+(d>0?'pos':'neg')+'">'+(d>0?'+':'-')+f(Math.abs(d))+' vs now</small>';};
   $('#wiPay').innerHTML=isFinite(m.payback)?fmt(m.payback,1)+'<small>years</small>':'Never<small>EBITDA is negative</small>';
@@ -201,7 +202,7 @@ function renderWhatif(){
   const yrs=[...Array(16).keys()],cum=yrs.map(y=>(-WI.capex*1e6+m.E*y)/1e6*curRate()),cumB=yrs.map(y=>(-wiBase().capex*1e6+b.E*y)/1e6*curRate());
   drawChart($('#c_wi'),{labels:yrs.map(y=>'Year '+y),series:[{name:'This scenario',color:'#d9c46a',type:'line',data:cum,dec:1},{name:'Current plant',color:'#5d6a77',type:'line',data:cumB,dec:1}],limits:[{v:0,color:'#8a97a4',label:'break-even'}]});
   const L=lsGet('wtg_wi_list',[]);
-  $('#wiList').innerHTML=L.length?'<table><tr><th>Name</th><th class="r">t/day</th><th class="r">Days</th><th class="r">H₂ %</th><th class="r">Gas price</th><th class="r">Discount</th><th class="r">Gate fee</th><th class="r">EBITDA a year</th><th class="r">Payback</th><th></th></tr>'+L.map((s,i)=>{const r=wiModel(s.x);return `<tr><td>${esch(s.name)}</td><td class="r">${fmt(s.x.tpd)}</td><td class="r">${s.x.days}</td><td class="r">${fmt(s.x.h2,1)}</td><td class="r">${fmt(s.x.ng)}</td><td class="r">${fmt(s.x.disc)} %</td><td class="r">${fmt(s.x.gate)}</td><td class="r">${eurK(r.E)}</td><td class="r">${isFinite(r.payback)?fmt(r.payback,1)+' years':'never'}</td><td class="r nw"><button class="btn sm" data-a="load" data-i="${i}">Load</button> <button class="btn sm" data-a="del" data-i="${i}">Delete</button></td></tr>`;}).join('')+'</table>':'<div class="empty">Save a scenario to compare it here.</div>';
+  $('#wiList').innerHTML=L.length?'<table><tr><th>Name</th><th class="r">t/day</th><th class="r">Days</th><th class="r">H₂ %</th><th class="r">Gas price</th><th class="r">Discount</th><th class="r">Gate fee</th><th class="r">EBITDA a year</th><th class="r">Payback</th><th></th></tr>'+L.map((s,i)=>{const r=wiModel(s.x);return `<tr><td>${esch(s.name)}</td><td class="r">${fmt(s.x.tpd)}</td><td class="r">${s.x.days}</td><td class="r">${fmt(s.x.h2,1)}</td><td class="r">${fmt(s.x.ng*curRate(),2)}</td><td class="r">${fmt(s.x.disc)} %</td><td class="r">${fmt(s.x.gate*curRate())}</td><td class="r">${eurK(r.E)}</td><td class="r">${isFinite(r.payback)?fmt(r.payback,1)+' years':'never'}</td><td class="r nw"><button class="btn sm" data-a="load" data-i="${i}">Load</button> <button class="btn sm" data-a="del" data-i="${i}">Delete</button></td></tr>`;}).join('')+'</table>':'<div class="empty">Save a scenario to compare it here.</div>';
 }
 PAGES.whatif={title:'What-if',period:false,still:true,render:renderWhatif,sub:()=>'A full year under the conditions you set'};
 
@@ -218,6 +219,7 @@ function renderGrid(){
     attachTip($('#c_gr'));
     const F=[['eng','Engines for surplus gas',0,FAC],['fuel','Fuel the syngas replaces (for carbon credits)',0,FAC],['glass','Factory output (t of glass a day)',5,FAC],['gj','Furnace energy (GJ per t of glass)',0.1,FAC],['blend','Syngas share of the furnace fuel (%)',5,FAC],['elecSell','Electricity export price (EUR per kWh)',0.01,FAC],['gridF','Grid emission factor (kg CO2 per kWh)',0.01,FAC],['ng','Market gas price (EUR per MMBtu)',0.01,FIN],['disc','Syngas discount to market (%)',1,FIN],['mmbtu','MMBtu per 1,000 Nm³',0.5,FIN]];
     $('#grF').innerHTML=F.map(f=>f[0]==='eng'?`<label class="field">${f[1]}<select data-f="eng" data-o="fac" ${can('edit')?'':'disabled'}><option value="0"${FAC.eng?'':' selected'}>Not built, gas only</option><option value="1"${FAC.eng?' selected':''}>Built, surplus makes power</option></select></label>`:f[0]==='fuel'?`<label class="field">${f[1]}<select data-f="fuel" data-o="fac" ${can('edit')?'':'disabled'}><option value="bio"${FAC.fuel==='bio'?' selected':''}>Biomethane</option><option value="ng"${FAC.fuel==='ng'?' selected':''}>Natural gas</option></select></label>`:`<label class="field">${f[1]}<input type="number" min="0" step="${f[2]}" data-f="${f[0]}" data-o="${f[3]===FAC?'fac':'fin'}" value="${f[3][f[0]]}" ${can('edit')?'':'disabled'}></label>`).join('');
+    wireMoney($('#grF'),i=>(i.dataset.o==='fac'?FAC:FIN)[i.dataset.f]);
     $('#grF').addEventListener('change',e=>{const k=e.target.dataset.f;if(!k)return;if(k==='fuel'){FAC.fuel=e.target.value;saveFac();tick(true);return;}if(k==='eng'){FAC.eng=e.target.value==='1';saveFac();applyHybrid();gotoScreen('grid');return;}const v=parseFloat(e.target.value);if(!(v>=0))return;
       if(e.target.dataset.o==='fac'){FAC[k]=k==='blend'?Math.min(100,v):v;saveFac();applyHybrid();}else{if(k==='ng'){if(FIN.ngMode==='auto'){e.target.value=FIN.ng;return;}FIN.ngMan=v;}FIN[k]=v;saveFin();if(k==='mmbtu')applyMmbtu();}tick(true);});
   }
