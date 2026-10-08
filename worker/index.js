@@ -118,9 +118,38 @@ async function gasPrice(ctx,debug){
   ],debug);
 }
 
+/* ---- sign-in with two passwords: admin (can change everything) and viewer (read only).
+   Set ADMIN_PASSWORD and VIEWER_PASSWORD as worker secrets. SESSION_SECRET is optional (any long random text).
+   If ADMIN_PASSWORD is not set, sign-in is off, so the power dashboard that shares this file is not affected. */
+const enc=new TextEncoder(),SESSION_SECS=7*24*3600;
+const b64u=buf=>btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+async function sign(env,msg){
+  const key=await crypto.subtle.importKey('raw',enc.encode(env.SESSION_SECRET||('s|'+env.ADMIN_PASSWORD+'|'+(env.VIEWER_PASSWORD||''))),{name:'HMAC',hash:'SHA-256'},false,['sign']);
+  return b64u(await crypto.subtle.sign('HMAC',key,enc.encode(msg)));
+}
+const samePw=async(env,a,b)=>(await sign(env,'pw|'+a))===(await sign(env,'pw|'+b));
+const jres=(obj,status=200,extra={})=>new Response(JSON.stringify(obj),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store',...extra}});
+async function sessionRole(req,env){
+  const m=(req.headers.get('Cookie')||'').match(/(?:^|;\s*)co_s=([^;]+)/);if(!m)return null;
+  const [role,exp,sig]=m[1].split('.');if(!sig||(role!=='admin'&&role!=='viewer')||!(+exp>Date.now()/1000))return null;
+  return (await sign(env,role+'.'+exp))===sig?role:null;
+}
+async function authApi(req,env,path){
+  if(!env.ADMIN_PASSWORD)return jres({ok:false,auth:false,error:'Sign-in is not set up on this address'});
+  if(path==='/api/me'){const role=await sessionRole(req,env);return role?jres({ok:true,auth:true,role}):jres({ok:false,auth:true},401);}
+  if(path==='/api/logout')return jres({ok:true},200,{'Set-Cookie':'co_s=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict'});
+  if(req.method!=='POST')return jres({ok:false,error:'POST only'},405);
+  let pw='';try{pw=String((await req.json()).password||'');}catch(e){}
+  const role=pw&&await samePw(env,pw,env.ADMIN_PASSWORD)?'admin':(pw&&env.VIEWER_PASSWORD&&await samePw(env,pw,env.VIEWER_PASSWORD)?'viewer':null);
+  if(!role){await new Promise(r=>setTimeout(r,700));return jres({ok:false,error:'Wrong password.'},401);}
+  const exp=Math.floor(Date.now()/1000)+SESSION_SECS,tok=role+'.'+exp+'.'+await sign(env,role+'.'+exp);
+  return jres({ok:true,role},200,{'Set-Cookie':'co_s='+tok+'; Path=/; Max-Age='+SESSION_SECS+'; HttpOnly; Secure; SameSite=Strict'});
+}
+
 export default{
   async fetch(req,env,ctx){
     const u=new URL(req.url);
+    if(u.pathname==='/api/login'||u.pathname==='/api/logout'||u.pathname==='/api/me')return authApi(req,env,u.pathname);
     if(u.pathname==='/api/carbon-price')return carbonPrice(ctx,u.searchParams.has('debug'));
     if(u.pathname==='/api/fx')return fxRates(ctx,u.searchParams.has('debug'));
     if(u.pathname==='/api/nj-power')return njPower(ctx,u.searchParams.has('debug'));

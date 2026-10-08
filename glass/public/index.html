@@ -22,7 +22,7 @@
   <div class="railfoot">
     <button class="who" id="whoBtn" title="Switch role"><i id="whoInit">?</i><div><span id="whoName">Not signed in</span><small id="whoRole"></small></div></button>
     <button class="btn" id="btnInstall" hidden>Install as app</button>
-    <div class="ver">Gas version preview, branch feature/next-level</div>
+    <div class="ver">Gas version</div>
   </div>
 </nav>
 <div class="main">
@@ -32,7 +32,7 @@
   <div class="sp"></div>
   <div class="modes" id="modes"><button data-m="live">Live</button><button data-m="day">Day</button><button data-m="month">Month</button><button data-m="year">Year</button><button data-m="custom" title="Custom time frame: the last N days">Custom</button><label class="cdays" title="Number of days, ending now"><input id="cdays" type="number" min="1" max="1825" step="1" inputmode="numeric" aria-label="Custom time frame in days"><span>days</span></label></div>
   <div class="modes" id="curSel" role="group" aria-label="Currency"><button data-c="EUR">EUR</button><button data-c="USD">USD</button><button data-c="GBP">GBP</button></div>
-  <label class="tpd" title="Waste processed per day. Type a new value to update everything.">Throughput <input id="tpd" type="number" min="1" max="5000" step="10" value="200"> t/day</label>
+  <label class="tpd" title="Waste processed per day. Type a new value to update everything.">Throughput <input id="tpd" type="number" min="1" max="5000" step="10" value="425"> t/day</label>
   <button class="btn" id="btnCsv" title="Download the data of this page as a CSV file">Export CSV</button>
   <span class="badge ok" id="alertBadge">No active alerts</span>
   <span class="badge live" title="Live data"><i></i><span id="clock"></span></span>
@@ -153,13 +153,11 @@
 
 <div id="login" class="modal" hidden>
   <div class="mbox">
-    <div class="mh"><h3>Who is using the console?</h3><button class="btn" id="loginX" hidden>Close</button></div>
-    <p class="muted" style="margin:0">Pick your role. Each role sees the pages and buttons it needs.</p>
-    <div class="roles" id="roleList"></div>
-    <div class="fgrid"><label class="field">Your name<input id="loginName" placeholder="e.g. Ana, shift lead" autocomplete="name"></label><label class="field" id="pinWrap" hidden>PIN for this role<input id="loginPin" type="password" inputmode="numeric" autocomplete="off"></label></div>
+    <div class="mh"><h3>Sign in</h3><button class="btn" id="loginX" hidden>Close</button></div>
+    <p class="muted" style="margin:0">Type the password you were given. The admin password can change everything. The viewer password can only look.</p>
+    <div class="fgrid"><label class="field">Your name (optional)<input id="loginName" placeholder="e.g. Ana" autocomplete="name"></label><label class="field">Password<input id="loginPin" type="password" autocomplete="current-password"></label></div>
     <div class="status" id="loginMsg"></div>
-    <div class="mact"><button class="btn pri" id="loginGo">Enter console</button></div>
-    <div class="note">Roles here are a convenience on this device, not security. To restrict who can open the dashboard, put it behind Cloudflare Access (Zero Trust) so people sign in with their email first.</div>
+    <div class="mact"><button class="btn pri" id="loginGo">Sign in</button><button class="btn" id="loginOut" hidden>Sign out</button></div>
   </div>
 </div>
 <div class="tip" id="tip"></div>

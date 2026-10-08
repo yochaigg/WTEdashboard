@@ -3,7 +3,7 @@
 /* ================= SIMULATOR (deterministic: same time gives same data) ================= */
 const MIN=60000, HOUR=3600000, DAY=86400000;
 const SUPPLIERS=['Municipal Collection','EcoHaul','GreenRoute','City Services','AgroTrans'];
-let TPD=200;                       /* waste processed per day, tons (editable in header) */
+let TPD=425;                       /* waste processed per day, tons (editable in header) */
 const S=()=>TPD/30;                 /* scale vs the 30 t/day base model */
 /* GAS VERSION: cleaned syngas is piped to a glass factory and burned in its furnace instead of natural gas.
    p.kw is the heat delivered to the factory in kW (thermal), p.ownKw the electricity the plant buys for itself. */
