@@ -5,35 +5,63 @@
    Roles
    ===================================================================== */
 const ROLES={
-  manager:{label:'Plant manager',desc:'Everything, including settings and audit reports',pages:'*',acts:['ack','rules','audit','maint','handover','edit','sites']},
-  operator:{label:'Operator',desc:'Plant, alarms, maintenance and shift handover',pages:['plant','events','alarms','maint','shifts','suppliers','balance','grid','ask'],acts:['ack','maint','handover']},
-  auditor:{label:'Auditor',desc:'Carbon data, event log and balances, read only',pages:['plant','events','carbon','balance','suppliers','impact','ask'],acts:['audit']},
-  investor:{label:'Investor',desc:'Finance, what-if, impact and sites, read only',pages:['plant','finance','whatif','grid','carbon','impact','sites','ask'],acts:[]}
+  admin:{label:'Admin',desc:'Can change everything',pages:'*',acts:['ack','rules','audit','maint','handover','edit','sites']},
+  viewer:{label:'Viewer',desc:'Can look at everything, cannot change anything',pages:'*',acts:[]}
 };
-let USER=lsGet('wtg_user',null);
-function role(){return USER&&ROLES[USER.role]?ROLES[USER.role]:ROLES.manager;}
+let USER=null;   /* set after the server confirms the password; never read from browser storage */
+function role(){return USER&&ROLES[USER.role]?ROLES[USER.role]:ROLES.viewer;}
 function can(act){return role().acts.includes(act);}
 function canSee(p){const r=role();return r.pages==='*'||r.pages.includes(p);}
 function firstPage(){return Object.keys(PAGES).find(canSee)||'plant';}
 function applyRole(){
   const r=role(),nm=USER&&USER.name?USER.name:r.label;
-  $('#whoName').textContent=nm;$('#whoRole').textContent=USER?r.label:'Choose a role';$('#whoInit').textContent=(nm||'?').trim().charAt(0).toUpperCase();
+  $('#whoName').textContent=USER?nm:'Not signed in';$('#whoRole').textContent=USER?r.label:'';$('#whoInit').textContent=USER?(nm||'?').trim().charAt(0).toUpperCase():'?';
   $('#btnPkg').hidden=!can('audit');
   document.querySelectorAll('#screenCarbon input,#screenCarbon select,[data-page="carbon"] .form input,[data-page="carbon"] .form select,#fPriceMode button').forEach(i=>i.disabled=!can('edit'));
   $('#tpd').disabled=!can('edit');
+  if(can('edit'))document.querySelectorAll('[data-lock]').forEach(i=>{i.disabled=false;i.removeAttribute('data-lock');});
   document.querySelectorAll('section.page [id^="pg_"]').forEach(el=>{el._built=false;});
+  lockView();
 }
-const LG={sel:null};
-function openLogin(closable){
-  LG.sel=USER?USER.role:null;$('#loginName').value=USER&&USER.name||'';
-  $('#roleList').innerHTML=Object.entries(ROLES).map(([k,r])=>`<button data-r="${k}" class="${LG.sel===k?'on':''}"><b>${r.label}</b><span>${r.desc}</span></button>`).join('');
-  $('#loginX').hidden=!closable;$('#loginMsg').textContent='';$('#login').hidden=false;
+/* viewer: every field on every page is switched off, except search boxes, the custom day count, Ask the plant and the what-if sandbox */
+function lockView(){
+  if(!USER||can('edit'))return;
+  document.querySelectorAll('.main input,.main select,.main textarea').forEach(i=>{
+    if(i.disabled||i.matches('#evSearch,#askIn,#cdays')||i.closest('#pg_whatif'))return;
+    i.disabled=true;i.setAttribute('data-lock','1');});
 }
-$('#roleList').addEventListener('click',e=>{const b=e.target.closest('button[data-r]');if(!b)return;LG.sel=b.dataset.r;$('#roleList').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));});
-$('#loginGo').addEventListener('click',()=>{
-  if(!LG.sel){$('#loginMsg').textContent='Pick a role to continue.';$('#loginMsg').style.color='var(--amber)';return;}
-  USER={role:LG.sel,name:$('#loginName').value.trim()};lsSet('wtg_user',USER);$('#login').hidden=true;addOp('Signed in as '+ROLES[USER.role].label+(USER.name?' ('+USER.name+')':''));applyRole();route();});
+new MutationObserver(lockView).observe(document.querySelector('.main'),{childList:true,subtree:true});
+
+/* sign-in: the worker checks the password and sets a signed cookie; it decides admin or viewer */
+const DEV=/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)||location.protocol==='file:';
+const loginMsg=(t,ok)=>{const m=$('#loginMsg');m.textContent=t;m.style.color=ok?'var(--green)':'var(--amber)';};
+function openLogin(closable,msg){
+  $('#loginName').value=lsGet('wtg_name','');$('#loginPin').value='';
+  $('#loginX').hidden=!closable;$('#loginOut').hidden=!USER;$('#loginGo').disabled=false;loginMsg(msg||'');$('#login').hidden=false;
+  setTimeout(()=>{try{$(USER&&USER.name?'#loginPin':'#loginName').focus();}catch(e){}},50);
+}
+function enterAs(role,name){USER={role,name:name||''};$('#login').hidden=true;applyRole();route();}
+async function authCheck(){
+  let j=null;try{const r=await fetch('/api/me',{cache:'no-store'});j=await r.json();}catch(e){}
+  if(j&&j.ok&&j.role){enterAs(j.role,lsGet('wtg_name',''));return;}
+  if((!j||j.auth===false)&&DEV){enterAs('admin',lsGet('wtg_name',''));return;}   /* local testing only */
+  if(j&&j.auth===false){openLogin(false,'Sign-in is not set up on this address yet. Set the ADMIN_PASSWORD and VIEWER_PASSWORD secrets on the worker.');$('#loginGo').disabled=true;return;}
+  openLogin(false);
+}
+async function doLogin(){
+  const pw=$('#loginPin').value;if(!pw){loginMsg('Type the password.');return;}
+  $('#loginGo').disabled=true;
+  try{
+    const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});const j=await r.json().catch(()=>({}));
+    if(j.ok){const nm=$('#loginName').value.trim();lsSet('wtg_name',nm);enterAs(j.role,nm);addOp('Signed in as '+ROLES[j.role].label+(nm?' ('+nm+')':''));return;}
+    loginMsg(j.error||'Wrong password.');
+  }catch(e){loginMsg('Could not reach the sign-in service.');}
+  $('#loginGo').disabled=false;$('#loginPin').select();
+}
+$('#loginGo').addEventListener('click',doLogin);
+$('#loginPin').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
 $('#loginX').addEventListener('click',()=>{$('#login').hidden=true;});
+$('#loginOut').addEventListener('click',async()=>{try{await fetch('/api/logout',{method:'POST'});}catch(e){}USER=null;applyRole();openLogin(false);});
 $('#whoBtn').addEventListener('click',()=>openLogin(true));
 
 /* =====================================================================
@@ -72,7 +100,7 @@ function renderAlarms(onlyLog){
     host._h=null;host.innerHTML=`<p class="lead">Set the limits that raise alerts, and who hears about them. Warning and critical limits apply to the whole history, so the alert list, event log and analysis update as soon as you save.</p>
     <div class="card"><h3>Limits</h3><div class="scrollx" id="rtab"></div>
       <div class="mact">${ed?'<button class="btn pri" id="rSave">Save limits</button><button class="btn" id="rReset">Back to defaults</button>':''}<span class="status" id="rMsg"></span></div>
-      ${ed?'':'<div class="note">Your role can see the limits. A plant manager can change them.</div>'}</div>
+      ${ed?'':'<div class="note">You can see the limits. An admin can change them.</div>'}</div>
     <div class="grid2 mt"><div class="card"><h3>Who gets notified</h3><div class="fgrid">
       <label class="field">Email addresses<input id="ntEmail" placeholder="ops@plant.com, manager@plant.com"></label>
       <label class="field">WhatsApp numbers<input id="ntWa" placeholder="+598 99 123 456"></label>

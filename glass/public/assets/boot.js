@@ -4,5 +4,5 @@ loadRules();
 applyRole();
 state.screen=pageOf(location.hash);
 route();
-if(!USER)openLogin(false);
+authCheck();
 setInterval(()=>tick(false),1000);
